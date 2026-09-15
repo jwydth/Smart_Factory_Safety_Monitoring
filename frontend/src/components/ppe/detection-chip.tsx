@@ -10,12 +10,20 @@ export interface ChipAction {
   icon: LucideIcon;
   onClick: () => void;
   primary?: boolean;
+  /** For a disclosure toggle: whether the region it controls is open. */
+  expanded?: boolean;
+  /** For a disclosure toggle: id of the region it controls. */
+  controls?: string;
 }
 
+// min-h-7 (28px) clears WCAG 2.5.8's 24px target minimum with margin; these
+// sit over live video where a mis-click lands on the wrong suggestion.
 const PRIMARY_ACTION_CLASS =
-  "inline-flex items-center gap-1 rounded bg-sky-400 px-2 py-1 text-xs font-semibold text-slate-950 transition hover:bg-sky-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300";
+  "inline-flex min-h-7 cursor-pointer items-center gap-1 rounded bg-sky-400 px-2 py-1 text-xs font-semibold text-slate-950 transition hover:bg-sky-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300";
+// slate-500 border: 3.9:1 on the chip surface (slate-600 was 2.5:1, under the
+// 3:1 non-text minimum).
 const SECONDARY_ACTION_CLASS =
-  "inline-flex items-center gap-1 rounded border border-slate-600 px-2 py-1 text-xs font-semibold text-slate-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300";
+  "inline-flex min-h-7 cursor-pointer items-center gap-1 rounded border border-slate-500 px-2 py-1 text-xs font-semibold text-slate-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300";
 
 export function ChipActionButton({ action }: { action: ChipAction }) {
   const Icon = action.icon;
@@ -23,6 +31,8 @@ export function ChipActionButton({ action }: { action: ChipAction }) {
     <button
       type="button"
       onClick={action.onClick}
+      aria-expanded={action.expanded}
+      aria-controls={action.controls}
       className={action.primary ? PRIMARY_ACTION_CLASS : SECONDARY_ACTION_CLASS}
     >
       <Icon className="size-3 shrink-0" aria-hidden="true" />

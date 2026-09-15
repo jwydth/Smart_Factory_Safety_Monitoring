@@ -614,6 +614,8 @@ async def real_video_pipeline(
                     conf=settings.SIGN_CONFIDENCE_THRESHOLD,
                     classes=sign_classes,
                     device=detector.device,
+                    half=half,
+                    imgsz=image_size,
                     verbose=False,
                 )
                 compute_ms = (time.perf_counter() - compute_started) * 1000.0

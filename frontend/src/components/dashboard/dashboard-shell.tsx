@@ -41,8 +41,7 @@ import { BoundingBoxView } from "@/components/ppe/bounding-box-view";
 import { FileUpload } from "@/components/ppe/file-upload";
 import { LlHlsVideo } from "@/components/ppe/ll-hls-video";
 import {
-  PPESuggestionBanner,
-  SuggestionOverlayLayer,
+  SignSuggestionLayer,
   TrackingOverlayLayer,
 } from "@/components/ppe/video-tracking-overlay";
 import {
@@ -797,6 +796,16 @@ function CameraPanel({
   const currentFrameIndex = Math.round(
     liveStream.currentVideoTime * (liveStream.streamData.tracking_overlay.fps || 30),
   );
+  const signSuggestionLayer = (
+    <SignSuggestionLayer
+      zoneSuggestions={Object.values(autoZone.zoneSuggestions)}
+      ppeSuggestions={currentPpeEnabled ? [] : Object.values(autoZone.ppeSuggestions)}
+      onAcceptZone={(s, name) => void autoZone.handleAcceptSuggestion(s, name)}
+      onDismissZone={autoZone.handleDismissSuggestion}
+      onEnablePPE={autoZone.handleEnablePPESuggestion}
+      onDismissPPE={autoZone.handleDismissPPESuggestion}
+    />
+  );
 
   const selectFile = async (nextFile: File) => {
     upload.setFile(nextFile);
@@ -1514,6 +1523,10 @@ function CameraPanel({
                           {currentZoneEnabled || zoneDrawing.isDrawing || zoneDrawing.pendingAutoZoneIds.size > 0 ? (
                             <ZoneOverlaySvg zoneDrawing={zoneDrawing} zoneColors={zoneColors} />
                           ) : null}
+                          {/* Inside the player: its fullscreen button fullscreens the
+                              player element, so anything rendered beside it is left
+                              behind in fullscreen. */}
+                          {signSuggestionLayer}
                         </LlHlsVideo>
                       ) : upload.videoUrl ? (
                         <video
@@ -1551,16 +1564,7 @@ function CameraPanel({
                           }
                         />
                       ) : null}
-                      <SuggestionOverlayLayer
-                        suggestions={Object.values(autoZone.zoneSuggestions)}
-                        onAccept={(s, name) => void autoZone.handleAcceptSuggestion(s, name)}
-                        onDismiss={autoZone.handleDismissSuggestion}
-                      />
-                      <PPESuggestionBanner
-                        suggestions={currentPpeEnabled ? [] : Object.values(autoZone.ppeSuggestions)}
-                        onEnable={autoZone.handleEnablePPESuggestion}
-                        onDismiss={autoZone.handleDismissPPESuggestion}
-                      />
+                      {liveStream.isLive ? null : signSuggestionLayer}
                     </div>
                     {zoneDrawing.isDrawing ? (
                       <p className="mt-2 text-xs text-slate-400">

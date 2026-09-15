@@ -74,7 +74,8 @@ class PPEDetector:
             from ultralytics import YOLO
             import numpy as np
 
-            self.model = YOLO(str(model_path))
+            # Explicit task: a .engine carries no checkpoint to read it from.
+            self.model = YOLO(str(model_path), task="detect")
             # Warm up: one dummy inference so the CUDA context is ready before the first video
             dummy = np.zeros((640, 640, 3), dtype=np.uint8)
             self.model.predict(dummy, device=self.device, verbose=False)
@@ -129,7 +130,7 @@ class PPEDetector:
 
             pool: asyncio.Queue = asyncio.Queue(maxsize=ceiling)
             for i in range(prewarm):
-                instance = self.model if i == 0 else YOLO(self._pool_model_path)
+                instance = self.model if i == 0 else YOLO(self._pool_model_path, task="detect")
                 self._warm_pool_instance(instance)
                 pool.put_nowait(instance)
 
@@ -172,7 +173,7 @@ class PPEDetector:
         """Load and warm one more tracker-isolated instance. Blocking."""
         from ultralytics import YOLO
 
-        instance = YOLO(self._pool_model_path)
+        instance = YOLO(self._pool_model_path, task="detect")
         self._warm_pool_instance(instance)
         return instance
 
@@ -260,19 +261,27 @@ class PPEDetector:
             from ultralytics import YOLO
             import numpy as np
 
-            self.sign_model = YOLO(str(sign_path))
+            self.sign_model = YOLO(str(sign_path), task="detect")
             # Warm up at both a square and a realistic 16:9 camera shape — same
             # reasoning as the main model's pool warmup above. Unlike the main
             # model, sign_model is never pooled/reused, so without this its
             # very first call (which happens on frame 0 of the first stream,
             # since frame_index % SIGN_PASS_FRAME_INTERVAL == 0 there) pays the
             # full cold-start cost live: measured ~6.3s on this repo's own RTSP
-            # demo setup.
+            # demo setup. Precision is fixed by the first call, so warm up with
+            # the same half/imgsz the live sign pass uses.
+            half = bool(settings.INFERENCE_HALF) and self.device.startswith("cuda")
             for dummy in (
                 np.zeros((640, 640, 3), dtype=np.uint8),
                 np.zeros((720, 1280, 3), dtype=np.uint8),
             ):
-                self.sign_model.predict(dummy, device=self.device, verbose=False)
+                self.sign_model.predict(
+                    dummy,
+                    device=self.device,
+                    half=half,
+                    imgsz=settings.INFERENCE_IMGSZ,
+                    verbose=False,
+                )
             logger.info(f"Sign model loaded and warmed up on {self.device}")
         except Exception as e:
             logger.error(f"Failed to load sign model: {e}", exc_info=True)

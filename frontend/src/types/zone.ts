@@ -37,6 +37,9 @@ export interface ZoneSuggestion {
   confidence: number;
   normalized_coordinates: { x: number; y: number }[];
   frame_index: number;
+  /** The sign's own box, normalized x1, y1, x2, y2. Absent from backends
+   * that predate it. */
+  bbox?: [number, number, number, number];
 }
 
 export interface PPESuggestion {

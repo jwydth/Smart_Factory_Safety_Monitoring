@@ -68,3 +68,52 @@ def test_priority_lock_deadline_prevents_ppe_starvation(monkeypatch):
     behavior.join()
 
     assert order == ["ppe", "behavior"]
+
+
+def test_priority_lock_recovers_when_the_designated_waiter_changes_while_parked():
+    """A parked waiter must re-check once its own deadline makes it the winner.
+
+    _next_waiter() is a function of the clock, not only of the waiter set, so
+    the ticket it designates can change with no state change and therefore no
+    notify from anyone. Waking the contenders one at a time — the way the
+    scheduler separates them under load — with the sign ticket's deadline
+    elapsing in between leaves the new designee asleep: sign re-checks first
+    and defers to behavior, then behavior re-checks after sign has gone overdue
+    and defers to sign. Since notify_all() fires only from release(), an
+    unowned lock never woke either of them again, and PPE, sign, and behavior
+    all froze together while the annotated stream went on publishing frames
+    with no detections drawn on them.
+    """
+    lock = PriorityInferenceLock()
+    lock._MAX_WAIT_SECONDS = {1: 0.01, 2: 0.20}
+    finished: list[str] = []
+
+    def contender(name: str, priority: int):
+        with lock.priority(priority):
+            finished.append(name)
+
+    lock.acquire(1)
+    # Daemon threads: a regression parks both of these forever, and a
+    # non-daemon pair would then hang interpreter shutdown after the assert
+    # below had already reported the failure.
+    sign = threading.Thread(target=contender, args=("sign", 2), daemon=True)
+    sign.start()
+    time.sleep(0.05)
+    behavior = threading.Thread(target=contender, args=("behavior", 0), daemon=True)
+    behavior.start()
+    time.sleep(0.05)
+
+    with lock._condition:
+        lock._owner = None
+        lock._depth = 0
+        lock._condition.notify(1)  # sign re-checks: behavior is designated
+    time.sleep(0.25)               # sign's 0.20s deadline passes while it sleeps
+    with lock._condition:
+        lock._condition.notify(1)  # behavior re-checks: sign is designated
+
+    sign.join(timeout=2.0)
+    behavior.join(timeout=2.0)
+
+    assert sorted(finished) == ["behavior", "sign"]
+    assert lock._owner is None
+    assert lock._waiters == []

@@ -144,7 +144,10 @@ class FallDetector:
             from ultralytics import YOLO
         except Exception as exc:
             raise FallModelUnavailable("Fall detection model is unavailable: ultralytics could not be imported.") from exc
-        self.model = YOLO(str(self.model_path))
+        # Explicit task: a .engine carries no checkpoint, and Ultralytics guesses
+        # the task from the filename ("pose.engine" -> detect), which would
+        # silently drop keypoints.
+        self.model = YOLO(str(self.model_path), task="pose")
         return self.model
 
     def _ensure_behavior_model(self) -> Any:

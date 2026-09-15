@@ -10,6 +10,10 @@ class ZoneSuggestion(BaseModel):
     confidence: float
     normalized_coordinates: list[dict]
     frame_index: int
+    # The sign's own box, normalized x1, y1, x2, y2. The zone polygon only
+    # starts below it, so without this a client can't keep its markers off
+    # the sign.
+    bbox: Optional[tuple[float, float, float, float]] = None
 
 
 class PPESuggestion(BaseModel):

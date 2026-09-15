@@ -2,21 +2,26 @@
 
 **Baseline:** `docs/CODEBASE_OVERVIEW.md`, whose narrative is written "as of
 2026-08-10" and which was last committed in `e62f094` (2026-08-14).
-**Head:** `b088657` (2026-09-04), branch `develop`, working tree clean.
+**Head:** `b088657` (2026-09-04), branch `develop`.
 
 **Range:** `git diff e62f094..HEAD` — 10 commits, 105 files, **+8,977 / −844**.
 
 This is a delta document, not a replacement. It records what moved, why, and
 which files to read. The baseline overview is still correct for everything not
-listed here — but the sections flagged in §10 have drifted and should be
+listed here — but the sections flagged in §11 have drifted and should be
 re-read against the code before you rely on them.
 
 > Sourcing note: the "why" for each change comes from the commit messages, which
 > in this range are unusually detailed. Every structural claim (new file, new
 > endpoint, new column, new setting, renamed default) was re-verified against the
 > code at `b088657`. Two commits (`00abe30` "UI modifications", `89e2157`
-> "Incident panel update") have no body, so their entries below are derived from
-> their diffs alone.
+> "Incident panel update") have no body; their content was recovered by reading
+> their diffs and is documented in §5, §6 and §10 rather than left as a gap —
+> between them they carry a whole zone type and a GPU capacity change.
+
+> Scope: commits only. Uncommitted working-tree changes are deliberately out of
+> scope for this document; check `git status` before assuming the tree matches
+> `b088657`.
 
 ---
 
@@ -27,7 +32,7 @@ re-read against the code before you rely on them.
 | `b088657` | 2026-09-04 | [FIX] Exempt janitors from slippery-zone labels in the tracking overlay |
 | `fe94876` | 2026-08-30 | [FIX] Suggestion lifecycle, camera identity, and incident panel feedback |
 | `c7653a4` | 2026-08-30 | [FIX] Correct incident zone attribution, filtering, and dashboard chrome |
-| `9591860` | 2026-08-26 | *(subject line malformed — see §9)* |
+| `9591860` | 2026-08-26 | *(subject line malformed — see §10)* |
 | `96513a7` | 2026-08-24 | [ADD] Filter the Live Incident Panel by severity, type, and time |
 | `ae9803d` | 2026-08-22 | [FIX] Eliminate black camera feed on dashboard reload |
 | `89e2157` | 2026-08-16 | [UPDATE] Incident panel update |
@@ -155,6 +160,26 @@ severity. **Change one, change all three.**
 The actual derivation rules — which are not written down anywhere else — are in
 **[Appendix A](#appendix-a--how-severity-is-derived)**.
 
+### Report translation is four layers, not one
+
+`i18n.py` is only the first of them, and the doc-level summary "an EN/VI i18n
+layer was added" undersells how much of the reporting stack moved. A
+`language: Language = "en"` parameter now threads through
+`report_data.py` -> `insights.py` -> `pdf_renderer.py` -> `email_sender.py`.
+
+| Layer | File | What it holds |
+| --- | --- | --- |
+| Key lookup | `reporting/i18n.py` | Static `t(key, language)` table for section headings, table headers, KPI labels, empty states. |
+| Generated sentences | `reporting/insights.py` | Each `_add_*` generator takes `language` and composes its own text. Kept out of `i18n.py` because these interpolate numbers and names and need real Vietnamese **word order**, not a swapped noun. |
+| Single reused words | `pdf_renderer.py`, `report_data.py` | Severity and category words get small report-local maps (e.g. `_SEVERITY_LABEL_VI` = Nghiêm Trọng / Cao / Trung Bình / Thấp), because they reappear in table cells, chart legends and canvas-drawn text rather than as one-shot `Paragraph` strings. |
+| Email chrome | `reporting/email_sender.py` | `_SUBJECT_TEMPLATES` keyed by language, and the HTML body's labels turned into `{…_label}` placeholders. Body layout and markup stay identical between languages — a template swap, not a per-language HTML rewrite. |
+
+Insight generators covered: trend direction, hotspot zone, dominant type,
+critical severity, severity shift, peak bucket, quiet zones, camera coverage,
+and all-clear. The **caveat** strings are translated too — the aggregation-cap
+warning, "no active cameras registered", the site-wide-zone-breakdown note, and
+the UTC-fallback note.
+
 ### What `i18n.py` deliberately does *not* translate
 
 Incident type labels, zone names, and camera names stay untranslated — they come
@@ -187,7 +212,7 @@ everything down immediately, so no ffmpeg is orphaned.**
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `MAX_CONCURRENT_STREAMS` | **1 -> 8** | Now a *pure safety ceiling*. Instances load on demand, so raising it reserves no VRAM. Also the max number of cameras that can stream at once. |
+| `MAX_CONCURRENT_STREAMS` | **1 -> 3 -> 8** | Now a *pure safety ceiling*. Instances load on demand, so raising it reserves no VRAM. Also the max number of cameras that can stream at once. Raised to 3 in `89e2157` ("three streams support the Matrix View camera set", still a pre-allocated pool at that point), then to 8 in `96513a7` once the pool grew on demand. |
 | `MODEL_POOL_PREWARM` | `3` | How many instances are built and warmed at startup. Keep >= the number of cameras normally streaming at once. |
 | `FRAME_HUB_IDLE_GRACE_SECONDS` | `60.0` | How long a camera's capture thread stays connected after its last subscriber leaves. `0` restores the old immediate-teardown behavior. At 8s a slightly-slow reload still fell off the edge and paid a full cold start. |
 | `ANNOTATED_PUBLISHER_IDLE_GRACE_SECONDS` | `60.0` | Same, for the ffmpeg/HLS publisher. |
@@ -236,6 +261,50 @@ fast turns an unrecoverable hang into a 503.
 ---
 
 ## 5. Zone logic
+
+### IGNORE zones — an entirely new zone type (`00abe30`)
+
+**This is the largest undocumented change in the range.** The commit message
+says only "[ADD] UI modifications". `IGNORE` did not exist anywhere at the
+baseline (zero matches across `backend/app` and `frontend/src` at `e62f094`);
+it now appears in 11 files.
+
+An IGNORE zone is an **exclusion mask**: a region a camera can see but should
+not police — a doorway onto a public walkway, a monitor showing footage of
+people, a reflective surface that produces phantom detections. Detections whose
+ground point falls inside one are dropped before anything is recorded.
+
+| Piece | File |
+| --- | --- |
+| `"IGNORE"` added to the `zone_type` literal | `schemas/detection.py`, `schemas/zone.py`, `types/detection.ts`, `types/zone.ts` |
+| `is_point_in_ignore_zone(zones, test_point)` | `services/zone_service.py` |
+| `ignore_zones_provider` / `_is_detection_ignored` | `services/behavior_stream.py` |
+| `ignore_detection` callback into pose processing | `services/video_pipeline/__init__.py` |
+| Drawing rules | `hooks/useZoneDrawing.ts` |
+
+The test point is the **bottom-centre of the bounding box** (`(x1+x2)/2`,
+`y2`) — where the person is standing, not where their head is — scaled by
+`COORD_SCALE`. Using the box centre would exclude anyone whose torso overlapped
+the mask while their feet were on the floor outside it.
+
+Front-end rules that differ from every other zone type
+(`useZoneDrawing.ts`):
+
+- **Dwell threshold is 0**, not 1.5s (or 3s for `WALKWAY`) — an exclusion is
+  immediate, since there is no violation to accumulate toward.
+- **Default name is "Exclusion Zone"**, not `"<TYPE> Zone"`.
+- **Overlap is allowed** with any other zone (`allowsOverlap` when either side
+  is `IGNORE`). Every other pair is kept disjoint; a mask is meaningless if it
+  cannot be drawn on top of the area it is masking.
+
+Note the interaction with §1: IGNORE is a *drawn* zone
+(`zone_violations.physical_zone_id`), never an AREA zone, so it never appears
+as an incident's `area_zone_id`. It is also excluded from analytics — see the
+baseline overview's note that only Factory Zones are charted.
+
+Related: `c7653a4` later fixed a crash where frame dimensions were read *after*
+the IGNORE filter, which broke the first frame of any camera with a zone
+configured (`tests/test_ignore_zone_filter.py`).
 
 ### Janitor exemption was incomplete (`b088657`)
 
@@ -306,6 +375,40 @@ chart still counted them. Each incident card now carries a severity badge.
 
 New in `src/lib/ppe-api.ts`: `SafetyEventsPage`, `SafetyEventsFilters`,
 `getSafetyEventsPage()`.
+
+### KPI row: never invent a number (`useSafetyKpis.ts`)
+
+Three separate changes, all about not stating something false while data is in
+flight:
+
+- **`pending` replaces `?? 0`.** No summary yet means the numbers are
+  *unknown*, not zero. The old fallback rendered **"0 Open Incidents"** for the
+  seconds before the first response landed — a specific, believable, wrong
+  number on a safety readout. Cards now show a placeholder while pending. A
+  *refetch* failure keeps the last good numbers (the 5s poll means one dropped
+  request shouldn't blank the row), but a cold failure with nothing cached
+  stays pending rather than inventing zeros.
+- **`placeholderData: keepPreviousData`.** `zoneId` is part of the query key,
+  so selecting a zone started a new query and `data` dropped to `undefined`
+  until it resolved. Zone Pulse builds its nodes from `summary.zone_totals`, so
+  that blanked and rebuilt the whole chart on every click — read as lag even
+  once the request was fast.
+- **Active Cameras now reads `live_cameras`, not `active_cameras`.** See §2:
+  the historical figure stayed high for days after a camera stopped streaming
+  and shifted when you changed the range. The `total_cameras` denominator
+  caveat from the baseline still stands.
+
+### Incident cards show camera names, not RTSP URLs (`89e2157`)
+
+Cards rendered `event.video_name`, which is the raw source key
+(`rtsp://127.0.0.1:8554/stream1`). A `cameras` query (60s `staleTime`) now
+builds a `source_key -> name` map, and cards fall back to `"Unknown camera"`
+rather than the URL. A `showMetadata` prop lets the live panel hide the
+Video/Frame/Track/ID grid entirely, which is noise in a compact feed.
+
+`CONFIRM_DELETE_ALL_INCIDENTS` was removed from `lib/messages.ts` — that flow
+is now `ConfirmDeleteAllDialog`, which states the record count and requires the
+word typed, neither of which a `window.confirm()` string can do.
 
 ### Panel feedback honesty (`fe94876`)
 
@@ -404,7 +507,48 @@ quoted from that commit message and were not re-run for this document.*
 
 ---
 
-## 9. Commit hygiene — worth fixing
+## 9. Performance fixes with no visible feature
+
+These change no behavior and appear in no UI, so they are easy to lose. All
+three were latency work on the same complaint — "selecting a zone feels slow".
+
+### MinIO bucket check was running per object (`evidence_storage.py`)
+
+`_ensure_bucket()` called `ensure_bucket_exists()` on **every** call, and
+`get_object_url()` calls it once per object. Building the incident feed
+therefore fired one `bucket_exists()` round-trip per row:
+
+> ~1.3ms × 810 rows = **~1.1s of pure network wait** on every analytics request.
+
+The result is now memoized in a module-level `WeakKeyDictionary[Minio, set[str]]`,
+keyed by client and bucket. A bucket that exists does not stop existing, so
+re-checking bought nothing. Weak keys mean a client built for a test doesn't
+outlive the test, and a recycled `id()` can't be mistaken for a
+previously-checked client. Uploads still surface a genuine outage —
+`fput_object` fails on its own if MinIO is unreachable.
+
+### The other two
+
+- **Analytics handlers moved to sync `def`** — see §2. Worth restating here
+  because it was the largest single win: `/health` went from a 1549ms median
+  back to 4ms, and camera WebSockets stopped stalling.
+- **`keepPreviousData` on the KPI query** — see §6. Not a backend saving; it
+  removed the blank-and-rebuild of Zone Pulse that made a fast request *look*
+  slow.
+
+### `MIN_VALID_FRAME_RATIO` extracted (`behavior_features.py`)
+
+A bare `.70` literal in the window-quality check became a named constant with
+the reasoning attached: it is the share of the 60-sample window that must carry
+a real pose, and a source slower than `CANONICAL_FPS` can never reach it
+because `accept_source_frame` pads the canonical timeline with missing samples,
+capping the ratio at `source_fps / CANONICAL_FPS`. `fall_detector.py` imports
+it for `unsupported_source_reason()`. Trivial as a diff, load-bearing for
+anyone tuning a camera's frame rate.
+
+---
+
+## 10. Commit hygiene — worth fixing
 
 - **`9591860` has a malformed subject line.** Its first line is
   `  video overlay, or are disabled states, and are deliberately unchanged.` —
@@ -414,25 +558,40 @@ quoted from that commit message and were not re-run for this document.*
   `git log --oneline`. This is the single largest gap in the range's history.
 - **`bfb2450` and `e62f094` are near-duplicate commits** with the same subject
   and overlapping bodies, one minute apart.
-- **`00abe30` ("UI modifications") and `89e2157` ("Incident panel update") have
-  no bodies**, despite `00abe30` touching 15 files across both backend and
-  frontend, including schema files (`schemas/detection.py`, `schemas/zone.py`)
-  and the zone service. Their intent is not recoverable from the log.
+- **`00abe30` is labelled "[ADD] UI modifications" and has no body**, but it is
+  not a UI change: it introduced the **IGNORE zone type** across 15 files,
+  backend and frontend, including two schema literals, a new zone-service
+  predicate, and a new filter hook in the behavior worker (§5). A whole feature
+  is invisible in `git log --oneline`. Recovered here by reading the diff, but
+  nobody scanning the log would know to look.
+- **`89e2157` ("Incident panel update") has no body** and carries two unrelated
+  changes: `MAX_CONCURRENT_STREAMS` 1 -> 3, and incident cards switching from
+  raw RTSP URLs to camera names plus a `showMetadata` prop (§6). A config
+  change to GPU stream capacity is not something to bury under "panel update".
+- **A 3,234-line planning document was committed as product source.**
+  `docs/AI_DISCLAIMER_I18N_REPORTS_ANALYTICS_FILTERS_IMPLEMENTATION_PLAN.md`
+  is an execution plan — it prescribes commit messages, phase ordering, and
+  acceptance gates for work that has since landed. It is the largest single
+  file added in the range. Now that the work is done it is a historical
+  artifact, and its prescribed commit messages (`Fix(video data): …`) do not
+  match what was actually committed (`[FIX] …`), so it will mislead anyone who
+  reads it as current guidance.
 
 ---
 
-## 10. Sections of `CODEBASE_OVERVIEW.md` to re-read before trusting
+## 11. Sections of `CODEBASE_OVERVIEW.md` to re-read before trusting
 
 | Section | Why |
 | --- | --- |
 | §5 Data model | Three new columns; `area_zone_id` changes how zone attribution works. |
 | §8 API routers | Two new endpoints, new analytics query params, handlers changed to sync `def`. |
 | §9 Detection & streaming | Grace-window lifecycle, on-demand model pool, `MAX_CONCURRENT_STREAMS` semantics inverted from "pool size" to "ceiling". |
-| §10 Zone monitoring & auto-zone | Suggestion lifecycle now reads saved zones, not an in-memory registry. |
+| §10 Zone monitoring & auto-zone | **A whole new zone type (IGNORE) exists that this section predates.** Suggestion lifecycle now reads saved zones, not an in-memory registry. |
 | §11 Incidents & analytics | Feed pagination moved server-side; `active_cameras` vs `live_cameras` split. |
-| §12 Reporting | EN/VI i18n layer added. |
+| §12 Reporting | EN/VI translation threads through four layers, not one. |
+| §13 Storage | `_ensure_bucket()` is memoized now; the per-object round-trip it describes is gone. |
 | §14 Scripts / tests / weights | Three new migration scripts; behavior weights no longer in git. |
-| §16–§22 Frontend | Largest churn in the range; three components/hooks added, one removed. |
+| §16–§22 Frontend | Largest churn in the range; three components/hooks added, one removed. KPI row no longer renders `0` for unknown. |
 
 ---
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Signpost, X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Check, CheckCircle2, ChevronDown, ChevronUp, Signpost, X } from "lucide-react";
 import { TrackingOverlay, TrackingOverlayFrame } from "@/types/detection";
 import { FallLiveDetection } from "@/types/behavior";
-import { PPESuggestion, ZoneSuggestion } from "@/types/zone";
+import { PPESuggestion, ZoneSuggestion, type ZoneType } from "@/types/zone";
 import { countLabel } from "@/lib/format";
-import { ChipActionButton, DetectionChip } from "@/components/ppe/detection-chip";
+import { ChipActionButton } from "@/components/ppe/detection-chip";
 import {
   selectOverlayAtTimeWithDiagnostics,
   type OverlaySelection,
@@ -505,174 +505,532 @@ const SIGN_HUMAN_NAMES: Record<string, string> = {
   W011_Slippery: "Slippery",
 };
 
-export function SuggestionOverlayLayer({
-  suggestions,
-  onAccept,
-  onDismiss,
+const ZONE_TYPE_LABELS: Record<ZoneType, string> = {
+  RESTRICTED: "Restricted zone",
+  SLIPPERY: "Slippery zone",
+  WALKWAY: "Walkway zone",
+  IGNORE: "Ignored area",
+};
+
+/**
+ * Every sign suggestion (a zone sign or a PPE sign) in one layer, split so
+ * nothing the model is pointing at gets covered:
+ *
+ * - On the video: a dashed highlight plus a small numbered tag placed next to
+ *   the sign, clear of every sign in frame (see placeTags). The old chip was
+ *   anchored to the zone polygon's top edge — which is the sign's bottom edge
+ *   (auto_zone.derive_zone_polygon) — and translated up by its own height,
+ *   which parked a name field and two buttons exactly on the sign.
+ * - In a tray along the bottom: a row per suggestion, numbered like its tag,
+ *   with the editable name and the actions. The tray docks on the side with
+ *   less of the suggested zones and signs under it (chooseTraySide), so the
+ *   zone being offered stays visible while the user decides; it collapses to
+ *   a one-line header on demand; and hovering or focusing a row brightens
+ *   that suggestion's highlight and tag on the video.
+ *
+ * Zone and PPE rows share the tray because two separately bottom-anchored
+ * layers would stack on top of each other.
+ */
+export function SignSuggestionLayer({
+  zoneSuggestions,
+  ppeSuggestions,
+  onAcceptZone,
+  onDismissZone,
+  onEnablePPE,
+  onDismissPPE,
 }: {
-  suggestions: ZoneSuggestion[];
-  onAccept: (suggestion: ZoneSuggestion, name: string) => void;
-  onDismiss: (suggestion: ZoneSuggestion) => void;
+  zoneSuggestions: ZoneSuggestion[];
+  ppeSuggestions: PPESuggestion[];
+  onAcceptZone: (suggestion: ZoneSuggestion, name: string) => void;
+  onDismissZone: (suggestion: ZoneSuggestion) => void;
+  onEnablePPE: (suggestion: PPESuggestion) => void;
+  onDismissPPE: (suggestion: PPESuggestion) => void;
 }) {
   const [editableNames, setEditableNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setEditableNames((prev) => {
       const next = { ...prev };
-      for (const s of suggestions) {
+      for (const s of zoneSuggestions) {
         if (!(s.suggestion_id in next)) {
           next[s.suggestion_id] = SIGN_HUMAN_NAMES[s.source_class] ?? s.source_class;
         }
       }
       return next;
     });
-  }, [suggestions]);
+  }, [zoneSuggestions]);
 
-  if (suggestions.length === 0) return null;
+  const zones = zoneSuggestions.filter((s) => s.normalized_coordinates.length >= 3);
+  const total = zones.length + ppeSuggestions.length;
+  const hasSuggestions = total > 0;
+  const listId = useId();
+
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const setActive = (key: string, active: boolean) =>
+    setActiveKey((current) => (active ? key : current === key ? null : current));
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Accepting a suggestion removes its row at once (useAutoZoneSuggestions is
+  // optimistic), so a pending state on the button would never be seen. A short
+  // confirmation in the tray says the click landed instead.
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const confirmationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (confirmationTimer.current) clearTimeout(confirmationTimer.current);
+    },
+    [],
+  );
+  const confirm = (message: string) => {
+    if (confirmationTimer.current) clearTimeout(confirmationTimer.current);
+    setConfirmation(message);
+    confirmationTimer.current = setTimeout(() => setConfirmation(null), CONFIRMATION_MS);
+  };
+
+  // Tag placement is decided in pixels (a tag's size is fixed in px, the
+  // frame's is not), so track the rendered frame size.
+  const tagLayerRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState<StageSize | null>(null);
+  useEffect(() => {
+    const element = tagLayerRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setStageSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [hasSuggestions]);
+
+  const zoneSignBoxes = zones.map((s) => s.bbox ?? zoneSignFallbackBox(s));
+  const signBoxes = [...zoneSignBoxes, ...ppeSuggestions.map((s) => s.bbox)];
+  // Sticky: the tray only moves when the other side is strictly better. On a
+  // tie — e.g. the last zone suggestion was just accepted, leaving only PPE
+  // signs — it stays put rather than jumping onto the zone just added (which
+  // this layer can't see; it's drawn by ZoneOverlaySvg).
+  const [traySide, setTraySide] = useState<TraySide>("left");
+  const preferredSide = chooseTraySide(zones.map(polygonBounds), signBoxes);
+  if (preferredSide !== null && preferredSide !== traySide) {
+    setTraySide(preferredSide);
+  }
+  const names = [...zones, ...ppeSuggestions].map((s) => SIGN_HUMAN_NAMES[s.source_class] ?? s.source_class);
+  // Read by screen readers whenever it changes: a new sign, a removed one, or
+  // the confirmation after an action. Rendered even with no suggestions, since
+  // a live region only announces changes to content it already had mounted.
+  const announcement =
+    confirmation ?? (hasSuggestions ? `${countLabel(total, "sign suggestion")}: ${names.join(", ")}.` : "");
 
   return (
     <>
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        viewBox="0 0 1 1"
-        preserveAspectRatio="none"
-      >
-        {suggestions.map((s) => {
-          const pts = s.normalized_coordinates;
-          if (pts.length < 3) return null;
-          const d =
-            `M ${pts[0].x} ${pts[0].y} ` +
-            pts.slice(1).map((p) => `L ${p.x} ${p.y}`).join(" ") +
-            " Z";
-          return (
-            <path
-              key={s.suggestion_id}
-              d={d}
-              fill="rgba(56,189,248,0.15)"
-              stroke="#38bdf8"
-              strokeWidth={0.005}
-              strokeDasharray="0.02 0.01"
-            />
-          );
-        })}
-      </svg>
+      <p className="sr-only" role="status">
+        {announcement}
+      </p>
 
-      {suggestions.map((s) => {
-        const pts = s.normalized_coordinates;
-        if (pts.length < 3) return null;
-        const minX = Math.min(...pts.map((p) => p.x));
-        const minY = Math.min(...pts.map((p) => p.y));
-        const maxX = Math.max(...pts.map((p) => p.x));
-        const maxY = Math.max(...pts.map((p) => p.y));
-        const centerX = (minX + maxX) / 2;
-        // Place label above the polygon; if too close to top, place it below instead
-        const anchorY = minY > 0.12 ? minY : maxY;
-        const translateY = minY > 0.12 ? "-100%" : "0%";
-        const humanName = SIGN_HUMAN_NAMES[s.source_class] ?? s.source_class;
-        const editableName = editableNames[s.suggestion_id] ?? humanName;
-
-        return (
-          <div
-            key={s.suggestion_id}
-            className="absolute w-48"
-            style={{
-              left: `${centerX * 100}%`,
-              top: `${anchorY * 100}%`,
-              transform: `translate(-50%, ${translateY})`,
-            }}
+      {hasSuggestions ? (
+        <>
+          <svg
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+            aria-hidden="true"
           >
-            <DetectionChip
-              icon={Signpost}
-              title={`${humanName} sign detected`}
-              actions={[
-                { label: "Add zone", icon: Check, onClick: () => onAccept(s, editableName), primary: true },
-                { label: "Dismiss", icon: X, onClick: () => onDismiss(s) },
-              ]}
-            >
-              <input
-                value={editableName}
-                onChange={(e) =>
-                  setEditableNames((prev) => ({ ...prev, [s.suggestion_id]: e.target.value }))
-                }
-                aria-label="Zone name"
-                className="w-full rounded border border-slate-700 bg-slate-900 px-1.5 py-1 text-xs text-white outline-none focus-visible:border-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-400"
+            {zones.map((s) => {
+              const pts = s.normalized_coordinates;
+              const d =
+                `M ${pts[0].x} ${pts[0].y} ` +
+                pts.slice(1).map((p) => `L ${p.x} ${p.y}`).join(" ") +
+                " Z";
+              const active = activeKey === s.suggestion_id;
+              return (
+                <g key={s.suggestion_id}>
+                  {/* Dark underlay: the sky dash alone drops to 1.9:1 against
+                      bright sky and 2.7:1 against blue steel. */}
+                  <path
+                    d={d}
+                    fill={active ? "rgba(56,189,248,0.3)" : "rgba(56,189,248,0.15)"}
+                    stroke="rgba(2,6,23,0.85)"
+                    strokeWidth={active ? 0.012 : 0.009}
+                  />
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={active ? "#7dd3fc" : "#38bdf8"}
+                    strokeWidth={active ? 0.007 : 0.005}
+                    strokeDasharray="0.02 0.01"
+                  />
+                </g>
+              );
+            })}
+            {ppeSuggestions.map((s) => {
+              const [x1, y1, x2, y2] = s.bbox;
+              const active = activeKey === s.suggestion_id;
+              const box = { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+              return (
+                <g key={s.suggestion_id}>
+                  <rect
+                    {...box}
+                    fill={active ? "rgba(56,189,248,0.25)" : "rgba(56,189,248,0.12)"}
+                    stroke="rgba(2,6,23,0.85)"
+                    strokeWidth={active ? 0.01 : 0.008}
+                  />
+                  <rect
+                    {...box}
+                    fill="none"
+                    stroke={active ? "#7dd3fc" : "#38bdf8"}
+                    strokeWidth={active ? 0.006 : 0.004}
+                    strokeDasharray="0.015 0.008"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Visual only: every tag repeats text its tray row already exposes. */}
+          <div ref={tagLayerRef} className="pointer-events-none absolute inset-0" aria-hidden="true">
+            {placeTags(
+              [
+                ...zones.map((s, index) => ({
+                  key: s.suggestion_id,
+                  number: index + 1,
+                  label: names[index],
+                  sign: zoneSignBoxes[index],
+                })),
+                ...ppeSuggestions.map((s, index) => ({
+                  key: s.suggestion_id,
+                  number: zones.length + index + 1,
+                  label: names[zones.length + index],
+                  sign: s.bbox,
+                })),
+              ],
+              stageSize ?? FALLBACK_STAGE_SIZE,
+              // Measure only once mounted, so the server render and the first
+              // client render agree on tag positions.
+              stageSize !== null,
+            ).map((tag) => (
+              <SuggestionTag
+                key={tag.key}
+                number={tag.number}
+                label={tag.label}
+                left={tag.left}
+                top={tag.top}
+                active={activeKey === tag.key}
               />
-            </DetectionChip>
+            ))}
           </div>
-        );
-      })}
+        </>
+      ) : null}
+
+      {hasSuggestions || confirmation ? (
+        // Tray sits above the controls parked along the bottom edge of
+        // LlHlsVideo — the "AI-generated demo footage" badge (bottom-3 left-3)
+        // and the fullscreen button (bottom-3 right-3), ~46px together — and
+        // above native <video> controls on the uploaded-file path. The wrapper
+        // spans the frame (so max-h-[45%] has a height to resolve against) but
+        // ignores the pointer; only the tray takes clicks. The width cap keeps
+        // the opposite ~40% of the frame clear for the zone being suggested,
+        // and on a wide feed (fullscreen) stops rows stretching edge to edge.
+        <div
+          className={`pointer-events-none absolute inset-x-0 top-0 bottom-12 flex flex-col justify-end px-2 ${
+            traySide === "right" ? "items-end" : "items-start"
+          }`}
+        >
+          <section
+            aria-label="Sign suggestions"
+            className="pointer-events-auto flex max-h-[45%] w-full max-w-[min(48rem,62%)] flex-col gap-1.5"
+          >
+            {confirmation ? (
+              <p className="detection-chip-enter flex items-center gap-1.5 rounded-md border border-emerald-400/50 bg-slate-950/95 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-black/40">
+                <CheckCircle2 className="size-3.5 shrink-0 text-emerald-400" aria-hidden="true" />
+                {confirmation}
+              </p>
+            ) : null}
+            {hasSuggestions ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-sky-400/50 bg-slate-950/95 py-1 pr-1 pl-2.5 text-xs shadow-lg shadow-black/40">
+                <span className="flex items-center gap-1.5 font-semibold text-white">
+                  <Signpost className="size-3.5 shrink-0 text-sky-300" aria-hidden="true" />
+                  {countLabel(total, "sign suggestion")}
+                </span>
+                <ChipActionButton
+                  action={{
+                    label: collapsed ? "Show" : "Hide",
+                    icon: collapsed ? ChevronUp : ChevronDown,
+                    onClick: () => setCollapsed((value) => !value),
+                    expanded: !collapsed,
+                    controls: listId,
+                  }}
+                />
+              </div>
+            ) : null}
+            {hasSuggestions && !collapsed ? (
+              <ul id={listId} className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+                {zones.map((s, index) => {
+                  const humanName = names[index];
+                  const editableName = editableNames[s.suggestion_id] ?? humanName;
+                  const inputId = `${listId}-zone-name-${index}`;
+                  return (
+                    <SuggestionRow
+                      key={s.suggestion_id}
+                      number={index + 1}
+                      title={`${humanName} sign detected`}
+                      detail={`${ZONE_TYPE_LABELS[s.zone_type] ?? s.zone_type} suggested`}
+                      active={activeKey === s.suggestion_id}
+                      onActiveChange={(active) => setActive(s.suggestion_id, active)}
+                    >
+                      <label htmlFor={inputId} className="text-slate-400">
+                        Zone name
+                      </label>
+                      <input
+                        id={inputId}
+                        value={editableName}
+                        onChange={(e) =>
+                          setEditableNames((prev) => ({ ...prev, [s.suggestion_id]: e.target.value }))
+                        }
+                        className="h-7 w-36 rounded border border-slate-500 bg-slate-900 px-1.5 text-xs text-white outline-none focus-visible:border-sky-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-400"
+                      />
+                      <ChipActionButton
+                        action={{
+                          label: "Add zone",
+                          icon: Check,
+                          primary: true,
+                          onClick: () => {
+                            onAcceptZone(s, editableName);
+                            confirm(`Zone "${editableName}" added`);
+                          },
+                        }}
+                      />
+                      <ChipActionButton action={{ label: "Dismiss", icon: X, onClick: () => onDismissZone(s) }} />
+                    </SuggestionRow>
+                  );
+                })}
+                {ppeSuggestions.map((s, index) => (
+                  <SuggestionRow
+                    key={s.suggestion_id}
+                    number={zones.length + index + 1}
+                    title={`${names[zones.length + index]} sign detected`}
+                    detail="PPE Detection is off"
+                    active={activeKey === s.suggestion_id}
+                    onActiveChange={(active) => setActive(s.suggestion_id, active)}
+                  >
+                    <ChipActionButton
+                      action={{
+                        label: "Enable PPE Detection",
+                        icon: Check,
+                        primary: true,
+                        onClick: () => {
+                          onEnablePPE(s);
+                          confirm("PPE Detection enabled");
+                        },
+                      }}
+                    />
+                    <ChipActionButton action={{ label: "Dismiss", icon: X, onClick: () => onDismissPPE(s) }} />
+                  </SuggestionRow>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
 
-export function PPESuggestionBanner({
-  suggestions,
-  onEnable,
-  onDismiss,
-}: {
-  suggestions: PPESuggestion[];
-  onEnable: (suggestion: PPESuggestion) => void;
-  onDismiss: (suggestion: PPESuggestion) => void;
-}) {
-  if (suggestions.length === 0) return null;
-
+function SuggestionNumber({ value }: { value: number }) {
   return (
-    <>
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        viewBox="0 0 1 1"
-        preserveAspectRatio="none"
-      >
-        {suggestions.map((s) => {
-          const [x1, y1, x2, y2] = s.bbox;
-          return (
-            <rect
-              key={s.suggestion_id}
-              x={x1} y={y1}
-              width={x2 - x1}
-              height={y2 - y1}
-              fill="rgba(56,189,248,0.12)"
-              stroke="#38bdf8"
-              strokeWidth={0.004}
-              strokeDasharray="0.015 0.008"
-            />
-          );
-        })}
-      </svg>
+    <span
+      className="flex size-4 shrink-0 items-center justify-center rounded-full bg-sky-400 text-[10px] font-bold leading-none text-slate-950"
+      aria-hidden="true"
+    >
+      {value}
+    </span>
+  );
+}
 
-      {/* Anchored to the bottom so the banner doesn't cover the top of the
-          frame, which is where an overhead camera usually shows the sign it
-          is reacting to. `pb-14` keeps it clear of the two controls already
-          parked along the bottom edge of LlHlsVideo — the "AI-generated demo
-          footage" badge (bottom-3 left-3) and the fullscreen button (bottom-3
-          right-3) — which together occupy about 46px. The extra gap is
-          harmless on the uploaded-file path, where neither control renders.
-          The chip-in keyframe translates upward into place, so it reads as
-          rising off the bottom edge here rather than being cut off by it. */}
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col gap-1.5 p-2 pb-14">
-        {suggestions.map((s) => {
-          const humanName = SIGN_HUMAN_NAMES[s.source_class] ?? s.source_class;
-          return (
-            <div
-              key={s.suggestion_id}
-              className="detection-chip-enter pointer-events-auto flex flex-wrap items-center justify-between gap-2 rounded-md border border-sky-400/50 bg-slate-950/95 px-3 py-2 text-xs shadow-lg shadow-black/40"
-            >
-              <span className="flex items-center gap-1.5">
-                <Signpost className="size-3.5 shrink-0 text-sky-300" aria-hidden="true" />
-                <span className="font-semibold text-white">{humanName} sign detected</span>
-                <span className="text-slate-400">PPE Detection is off</span>
-              </span>
-              <div className="flex shrink-0 gap-1.5">
-                <ChipActionButton
-                  action={{ label: "Enable PPE Detection", icon: Check, onClick: () => onEnable(s), primary: true }}
-                />
-                <ChipActionButton action={{ label: "Dismiss", icon: X, onClick: () => onDismiss(s) }} />
-              </div>
-            </div>
-          );
-        })}
+/** Normalized x1, y1, x2, y2 in [0, 1]. */
+type NormBox = [number, number, number, number];
+type StageSize = { width: number; height: number };
+type TraySide = "left" | "right";
+
+const CONFIRMATION_MS = 4000;
+// Used for the first render, before the ResizeObserver reports a size.
+const FALLBACK_STAGE_SIZE: StageSize = { width: 960, height: 540 };
+// SuggestionTag's rendered box: size-4 badge + py-0.5 + 1px border each side.
+const TAG_HEIGHT_PX = 22;
+const TAG_GAP_PX = 4;
+// Badge, gap, padding and border around the label text.
+const TAG_CHROME_PX = 32;
+
+let tagMeasureContext: CanvasRenderingContext2D | null | undefined;
+
+/** Tag width in px. Measures the label in the page's actual font; falls back to
+ * a rounded-up estimate (~6.4px a character at 11px semibold) where there is
+ * no canvas, e.g. during the server render. */
+function tagWidthPx(label: string, measure: boolean): number {
+  if (measure && typeof document !== "undefined") {
+    if (tagMeasureContext === undefined) {
+      tagMeasureContext = document.createElement("canvas").getContext("2d");
+    }
+    if (tagMeasureContext) {
+      tagMeasureContext.font = `600 11px ${getComputedStyle(document.body).fontFamily}`;
+      return Math.ceil(TAG_CHROME_PX + tagMeasureContext.measureText(label).width);
+    }
+  }
+  return TAG_CHROME_PX + label.length * 6.4;
+}
+
+/** A zone suggestion from a backend that doesn't send the sign's box: the
+ * sign sits directly above the zone polygon's top edge, centred on it. */
+function zoneSignFallbackBox(suggestion: ZoneSuggestion): NormBox {
+  const pts = suggestion.normalized_coordinates;
+  const cx = (Math.min(...pts.map((p) => p.x)) + Math.max(...pts.map((p) => p.x))) / 2;
+  const top = Math.min(...pts.map((p) => p.y));
+  return [cx - 0.04, Math.max(0, top - 0.12), cx + 0.04, top];
+}
+
+function polygonBounds(suggestion: ZoneSuggestion): NormBox {
+  const pts = suggestion.normalized_coordinates;
+  return [
+    Math.min(...pts.map((p) => p.x)),
+    Math.min(...pts.map((p) => p.y)),
+    Math.max(...pts.map((p) => p.x)),
+    Math.max(...pts.map((p) => p.y)),
+  ];
+}
+
+function boxesOverlap(a: NormBox, b: NormBox): boolean {
+  return a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+}
+
+// How much more a sign counts than zone area when docking the tray: covering
+// the sign itself is the failure this layer exists to avoid.
+const TRAY_SIGN_WEIGHT = 4;
+
+/**
+ * Docks the tray on whichever side it would cover less of the suggested
+ * zones and signs. The tray spans at most 62% of the width from its side and
+ * sits in the lower half of the frame, so each side is scored over that span.
+ * Returns null on a tie, leaving the caller's current side in place.
+ */
+function chooseTraySide(zoneBounds: NormBox[], signBoxes: NormBox[]): TraySide | null {
+  const coveredArea = (box: NormBox, from: number, to: number) =>
+    Math.max(0, Math.min(box[2], to) - Math.max(box[0], from)) * Math.max(0, box[3] - Math.max(box[1], 0.5));
+  const score = (from: number, to: number) =>
+    zoneBounds.reduce((sum, box) => sum + coveredArea(box, from, to), 0) +
+    signBoxes.reduce((sum, box) => sum + TRAY_SIGN_WEIGHT * coveredArea(box, from, to), 0);
+  const left = score(0, 0.62);
+  const right = score(0.38, 1);
+  if (Math.abs(left - right) < 1e-6) return null;
+  return right < left ? "right" : "left";
+}
+
+/**
+ * Puts each tag beside its sign without covering any sign in frame or another
+ * tag. Tries below, right, left, then above its own sign and takes the first
+ * spot that is clear; if none is (a crowded frame), falls back to below.
+ * Checking every sign — not just its own — matters because signs are often
+ * mounted in a column on one post: a tag hung below the top sign lands on the
+ * one beneath it.
+ */
+function placeTags(
+  requests: { key: string; number: number; label: string; sign: NormBox }[],
+  stage: StageSize,
+  measure: boolean,
+): { key: string; number: number; label: string; left: number; top: number }[] {
+  const signs = requests.map((request) => request.sign);
+  const placed: NormBox[] = [];
+  const clamp = (value: number, max: number) => Math.min(Math.max(value, 0), Math.max(0, max));
+
+  return requests.map((request) => {
+    const w = tagWidthPx(request.label, measure) / Math.max(stage.width, 1);
+    const h = TAG_HEIGHT_PX / Math.max(stage.height, 1);
+    const gapX = TAG_GAP_PX / Math.max(stage.width, 1);
+    const gapY = TAG_GAP_PX / Math.max(stage.height, 1);
+    const [x1, y1, x2, y2] = request.sign;
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    const candidates = [
+      [cx - w / 2, y2 + gapY], // below
+      [x2 + gapX, cy - h / 2], // right
+      [x1 - gapX - w, cy - h / 2], // left
+      [cx - w / 2, y1 - gapY - h], // above
+    ].map(([left, top]) => [clamp(left, 1 - w), clamp(top, 1 - h)] as const);
+
+    const isClear = ([left, top]: readonly [number, number]) => {
+      const box: NormBox = [left, top, left + w, top + h];
+      return !signs.some((sign) => boxesOverlap(box, sign)) && !placed.some((tag) => boxesOverlap(box, tag));
+    };
+    const [left, top] = candidates.find(isClear) ?? candidates[0];
+    placed.push([left, top, left + w, top + h]);
+    return { key: request.key, number: request.number, label: request.label, left, top };
+  });
+}
+
+/** Compact marker next to a sign, positioned by placeTags. Pointer-transparent,
+ * so it never blocks the video underneath; the actions live in the tray row. */
+function SuggestionTag({
+  number,
+  label,
+  left,
+  top,
+  active,
+}: {
+  number: number;
+  label: string;
+  left: number;
+  top: number;
+  active: boolean;
+}) {
+  return (
+    // Position on the outer element, animation on the inner one: the chip-in
+    // keyframes animate `transform`, which would fight any positioning
+    // transform on the same element.
+    <div className="pointer-events-none absolute" style={{ left: `${left * 100}%`, top: `${top * 100}%` }}>
+      <div
+        className={`detection-chip-enter flex items-center gap-1 whitespace-nowrap rounded-full border bg-slate-950/85 py-0.5 pl-0.5 pr-2 text-[11px] font-semibold text-white shadow shadow-black/40 ${
+          active ? "border-sky-300 ring-2 ring-sky-300/70" : "border-sky-400/60"
+        }`}
+      >
+        <SuggestionNumber value={number} />
+        {label}
       </div>
-    </>
+    </div>
+  );
+}
+
+function SuggestionRow({
+  number,
+  title,
+  detail,
+  active,
+  onActiveChange,
+  children,
+}: {
+  number: number;
+  title: string;
+  detail: string;
+  active: boolean;
+  onActiveChange: (active: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <li
+      onMouseEnter={() => onActiveChange(true)}
+      onMouseLeave={() => onActiveChange(false)}
+      onFocus={() => onActiveChange(true)}
+      onBlur={(event) => {
+        // Moving focus between the row's own controls keeps it active.
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onActiveChange(false);
+      }}
+      className={`detection-chip-enter flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-md border bg-slate-950/95 px-2.5 py-1.5 text-xs shadow-lg shadow-black/40 ${
+        active ? "border-sky-300" : "border-sky-400/50"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-1.5">
+        <SuggestionNumber value={number} />
+        <Signpost className="size-3.5 shrink-0 text-sky-300" aria-hidden="true" />
+        <span className="font-semibold text-white">{title}</span>
+        <span className="text-slate-400">{detail}</span>
+      </span>
+      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">{children}</div>
+    </li>
   );
 }
 

@@ -275,6 +275,12 @@ class SignZoneRegistry:
                     confidence=sign["conf"],
                     normalized_coordinates=coords,
                     frame_index=frame_index,
+                    bbox=(
+                        bbox[0] / frame_w,
+                        bbox[1] / frame_h,
+                        bbox[2] / frame_w,
+                        bbox[3] / frame_h,
+                    ),
                 )
             )
 

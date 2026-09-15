@@ -484,7 +484,15 @@ class BehaviorInferenceScheduler:
         model = self.detector._ensure_model()
         images = [request.image for request in requests]
         real_count = len(images)
-        if self.detector.device.startswith("cuda") and images:
+        # Padding to a fixed batch keeps PyTorch/cuDNN on one input shape. A
+        # TensorRT engine is built for batch 1..BEHAVIOR_BATCH_MAX_SIZE, so
+        # padding would only preprocess, infer and postprocess copies of the
+        # last frame: with one camera that is 4x the work (9 ms vs 20 ms).
+        if (
+            self.detector.device.startswith("cuda")
+            and images
+            and self.detector.model_path.suffix != ".engine"
+        ):
             images.extend(
                 [images[-1]] * (settings.BEHAVIOR_BATCH_MAX_SIZE - real_count)
             )
