@@ -1118,60 +1118,41 @@ function CameraPanel({
                         className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-white outline-none focus:border-slate-500"
                       />
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="grid gap-0.5 text-xs text-slate-400">
-                        3D Blueprint Zone
-                        <select
-                          value={cam.zoneId ?? ""}
-                          onChange={(e) => {
-                            const updated = [...tempCameras];
-                            updated[idx] = { ...updated[idx], zoneId: e.target.value };
-                            setTempCameras(updated);
-                          }}
-                          className="rounded border border-slate-700 bg-slate-950 px-1 py-1 text-xs text-white outline-none focus:border-slate-500 cursor-pointer"
-                        >
-                          <option value="">None</option>
-                          <option value="Z01">Production (Z01)</option>
-                          <option value="Z02">Warehouse (Z02)</option>
-                          <option value="Z03">Packing (Z03)</option>
-                        </select>
-                      </label>
-                      <label className="grid gap-0.5 text-xs text-slate-400">
-                        Home zone (Analytics)
-                        <select
-                          value={cam.homeZoneId ?? ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              setCreatingZoneForIdx(idx);
-                              setNewZoneName("");
-                              setNewZoneError("");
-                              return;
-                            }
-                            const updated = [...tempCameras];
-                            updated[idx] = {
-                              ...updated[idx],
-                              homeZoneId: e.target.value === "" ? null : Number(e.target.value),
-                            };
-                            setTempCameras(updated);
-                          }}
-                          className="rounded border border-slate-700 bg-slate-950 px-1 py-1 text-xs text-white outline-none focus:border-slate-500 cursor-pointer"
-                        >
-                          {/* Not a real choice — every camera should belong to a zone.
-                              Disabled placeholder only so cameras that predate this
-                              requirement still render their true (unset) state instead
-                              of silently snapping to whichever zone renders first. */}
-                          <option value="" disabled>
-                            No zone assigned
+                    <label className="grid gap-0.5 text-xs text-slate-400">
+                      Home zone (Analytics)
+                      <select
+                        value={cam.homeZoneId ?? ""}
+                        onChange={(e) => {
+                          if (e.target.value === "__new__") {
+                            setCreatingZoneForIdx(idx);
+                            setNewZoneName("");
+                            setNewZoneError("");
+                            return;
+                          }
+                          const updated = [...tempCameras];
+                          updated[idx] = {
+                            ...updated[idx],
+                            homeZoneId: e.target.value === "" ? null : Number(e.target.value),
+                          };
+                          setTempCameras(updated);
+                        }}
+                        className="rounded border border-slate-700 bg-slate-950 px-1 py-1 text-xs text-white outline-none focus:border-slate-500 cursor-pointer"
+                      >
+                        {/* Not a real choice — every camera should belong to a zone.
+                            Disabled placeholder only so cameras that predate this
+                            requirement still render their true (unset) state instead
+                            of silently snapping to whichever zone renders first. */}
+                        <option value="" disabled>
+                          No zone assigned
+                        </option>
+                        {physicalZones.map((zone) => (
+                          <option key={zone.id} value={zone.id}>
+                            {zone.name}
                           </option>
-                          {physicalZones.map((zone) => (
-                            <option key={zone.id} value={zone.id}>
-                              {zone.name}
-                            </option>
-                          ))}
-                          <option value="__new__">+ Create new zone…</option>
-                        </select>
-                      </label>
-                    </div>
+                        ))}
+                        <option value="__new__">+ Create new zone…</option>
+                      </select>
+                    </label>
                     {creatingZoneForIdx === idx && (
                       <div className="grid gap-1.5 rounded border border-lime-700/50 bg-slate-950 p-2">
                         <input
