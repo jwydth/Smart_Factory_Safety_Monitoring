@@ -160,11 +160,16 @@ Two caveats on the numbers that *are* shown:
 - The **Total Cameras** denominator counts rows in the `cameras` table, which can
   include cameras that are registered but not streaming.
 
-## 9. No measured accuracy, and the training data was synthetic
+## 9. No accuracy figure in this repository, and the training data was synthetic
 
-**No accuracy figure for any model exists in this repository, and none should be
-inferred.** The models were trained on synthetic footage generated with ComfyUI and
-Wan 14B, not on video from a De Heus site. The capstone demo footage was likewise
+**No accuracy figure for any model appears in this repository, and none should be
+inferred from it.** Training metrics were recorded, but they are held in the separate
+`ppe_labeling` labelling-tool documentation maintained by another member of the
+capstone team — obtain them from there (`VERIFY:` its location). They are
+training/validation metrics on synthetic data, not field performance.
+
+The models were trained on synthetic footage generated with ComfyUI and Wan 14B, not
+on video from a De Heus site. The capstone demo footage was likewise
 AI-generated, which is why the dashboard shows an AI-disclaimer badge on every
 annotated camera tile.
 

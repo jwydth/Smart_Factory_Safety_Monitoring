@@ -28,7 +28,7 @@
         "cleaning_coverall"
       ],
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
-      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+      "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Trained from the dataset at ppe-detection/v2_pipeline/artifacts/20260826T062011Z_direct-final_yolo12n-factory-only_s42_027537d/dataset.yaml on the capstone team's training machine. Training data was synthetic. VERIFY: whether that artifact directory is archived anywhere De Heus can reach."
     },
     {
@@ -54,7 +54,7 @@
         "W011_Slippery"
       ],
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
-      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+      "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Trained from sign-detection/runs/final_model/_data_exp_D_full_pipeline_resolved.yaml on the capstone team's training machine. Class names follow ISO-style safety-sign codes. VERIFY: whether that dataset is archived anywhere De Heus can reach."
     },
     {
@@ -79,7 +79,7 @@
       ],
       "keypoints": "17 COCO keypoints, kpt_shape [17, 3]",
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
-      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+      "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Checkpoint metadata shows training on the stock COCO-pose dataset on an Ultralytics developer machine, so this is a general-purpose public model rather than De Heus data. VERIFY: whether it is byte-identical to a published Ultralytics release; this was not confirmed, because confirming it needs a download and comparison."
     },
     {
@@ -101,7 +101,7 @@
       },
       "classes": "1000 ImageNet classes. The class head is not used \u2014 the model is used as a feature extractor for appearance embeddings.",
       "embedded_license": "AGPL-3.0 License (https://ultralytics.com/license)",
-      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+      "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "A stock ImageNet classification checkpoint used as a ReID backbone. VERIFY: whether it is byte-identical to the published yolo11m-cls release."
     },
     {
@@ -122,8 +122,9 @@
         "falling"
       ],
       "class_order_note": "predict_proba returns probabilities in this index order (0 others, 1 running, 2 falling); fall_detector.py unpacks them positionally, so the order is load-bearing.",
-      "obtain_from": "No request needed - recoverable from this repository's git history: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib  (needs a clone with history, not --depth 1)",
-      "source": "RECOVERABLE FROM THIS REPOSITORY. Deleted from git in c7653a4, still present in history. Restore with: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib"
+      "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com. ALSO independently recoverable from this repository's git history: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib  (needs a clone with history, not --depth 1)",
+      "source": "RECOVERABLE FROM THIS REPOSITORY. Deleted from git in c7653a4, still present in history. Restore with: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib",
+      "confirmed_production_model": "ExtraTrees is the production classifier. Confirmed by the capstone team, and it is what the capstone report documents. Corroborated in code by the config.py default, its comment ('The current production artifact is an sklearn ExtraTreesClassifier'), and the assertion in tests/test_fall_detector.py. Note that the development machine's .env pointed at the superseded XGBoost behavior.joblib instead, so the capstone demo ran that model rather than this one; see the superseded section below."
     }
   ],
   "superseded": [
@@ -210,7 +211,7 @@
         "note": "Export intermediate."
       }
     ],
-    "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+    "obtain_from": "Delivered separately, outside this repository, by the member of the capstone team who also maintains the ppe_labeling labelling-tool documentation. De Heus contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
     "reference_configuration": "The capstone development and demo machine ran PPE, sign and pose inference from these engines, not from the .pt files: MODEL_PATH=weights/ppe_v4.engine, SIGN_MODEL_PATH=weights/sign_model.engine, FALL_MODEL_PATH=weights/pose.engine. Only FALL_REID_MODEL_PATH stayed at weights/reid.pt, because no reid engine is built. Any demonstrated performance was therefore TensorRT performance. Running from .pt is supported and was verified on a CPU-only clean install, but is slower."
   }
 }

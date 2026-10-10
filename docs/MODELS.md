@@ -34,8 +34,20 @@ Two consequences worth stating plainly:
 
 ## Read this before judging any model below
 
-**No accuracy number exists for any of these models, and this document deliberately
-does not invent one.** No measured evaluation was run against real De Heus footage.
+**No accuracy number appears in this repository, and this document deliberately does
+not invent one.**
+
+Training metrics **were** recorded, but they live outside this repository: they are
+held in the documentation for the separate `ppe_labeling` labelling-tool repository,
+maintained by another member of the capstone team. `VERIFY:` the location of that
+documentation and obtain it — it is the only place the model evaluation figures exist,
+and this handover could not reference figures it has not seen.
+
+Two cautions when those figures arrive:
+
+- They are **training/validation metrics on synthetic data**, not field performance.
+- **No measured evaluation was run against real De Heus footage**, so they say nothing
+  about how the models behave on your cameras.
 
 **All training footage was synthetic**, generated with ComfyUI and Wan 14B rather than
 filmed at a De Heus site. The models have therefore never been tested against the
@@ -127,6 +139,21 @@ that needs a download and comparison, which was not done.
 | Input | 141 transformed pose/motion features over a 60-frame window |
 | Trained | `VERIFY:` unknown. Entered git 2026-08-05 (`de167f9`). |
 | Origin | **Custom-trained for this project** |
+
+**ExtraTrees is confirmed as the production classifier** — by the capstone team, and it
+is what the capstone report documents. Three things in the code agree: the `config.py`
+default, its comment (*"The current production artifact is an sklearn
+ExtraTreesClassifier"*), and the assertion in `tests/test_fall_detector.py`.
+
+> **But the capstone demo did not run it.** The development machine's `.env` pointed
+> `FALL_BEHAVIOR_MODEL_PATH` at the superseded `behavior.joblib`, which is an
+> **XGBoost** model (`XGBClassifier`, 1466 estimators, verified by loading it). Both
+> take 141 features and return the same three classes, so it loaded and ran silently —
+> the mismatch produced no error, only a failing test. Whatever behaviour detection was
+> demonstrated came from the XGBoost model, not this one. The two agree on about 95% of
+> inputs, but they are not the same model.
+>
+> `backend/.env.example` is corrected. Anyone with an existing `.env` should repoint it.
 
 This is the only non-YOLO model in the pipeline, and the only one that reasons over
 time rather than over a single frame. It consumes a rolling 60-frame window of pose

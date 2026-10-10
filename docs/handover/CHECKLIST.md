@@ -16,11 +16,12 @@ Ethan Phuc (Nguyen Trong Phuc) — ethan.phuc@deheus.com
       handover baseline; at handover `main` was 53 commits behind it and three months
       old, so the documentation does not describe the code on `main`
 - [ ] Tag `v1.0.0-handover` is present
-- [ ] **Four model weight files received** out of band: `ppe_v4.pt`, `sign_model.pt`,
-      `pose.pt`, `reid.pt`
-      *(the fifth, `best_behavior_model.joblib`, is recoverable from git history — see
-      `backend/weights/README.md`)*
-- [ ] TensorRT `.engine` files received *(optional; only load on matching hardware)*
+- [ ] **All five model weight files received** out of band: `ppe_v4.pt`, `sign_model.pt`,
+      `pose.pt`, `reid.pt`, `best_behavior_model.joblib` — delivered by the capstone
+      team member who also documents the `ppe_labeling` tool
+- [ ] TensorRT `.engine` files received — **what the demo actually ran on**, so expect
+      `.pt`-only deployment to be slower. They only load on hardware matching the
+      machine that built them; otherwise rebuild with `scripts/export_tensorrt.py`
 - [ ] Confirmed what happened to the training datasets and the `ppe_labeling`
       repository — **without the datasets the two custom models can be replaced but not
       retrained** (see `docs/MODELS.md`)
@@ -90,9 +91,12 @@ Ethan Phuc (Nguyen Trong Phuc) — ethan.phuc@deheus.com
 ## 6. Understand the limits
 
 - [ ] **`docs/KNOWN_LIMITATIONS.md` read and accepted**
-- [ ] **Accepted that no accuracy figure exists for any model.** All training footage
-      was synthetic; nothing has been evaluated against real De Heus cameras.
-      **Performance in production is unknown**
+- [ ] **Model training metrics obtained** from the `ppe_labeling` labelling-tool
+      documentation — they exist, but not in this repository, and this handover never
+      saw them
+- [ ] **Accepted that those are synthetic-data training metrics, not field
+      performance.** Nothing has been evaluated against real De Heus cameras, so
+      **production accuracy is unknown**
 - [ ] A pilot on real footage planned before anyone relies on the output
 - [ ] HSE staff told the system is an assistant, not a referee, and that every incident
       is a prompt to check rather than proof

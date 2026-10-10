@@ -118,11 +118,16 @@ that affect a deployment decision:
 
 ### Accuracy — the most important caveat
 
-11. **No accuracy figure exists for any model, and none should be inferred.** All
-    training footage was **synthetic**, generated with ComfyUI and Wan 14B, not filmed
-    at a De Heus site. The models have never been evaluated against real factory
-    cameras. **Performance in production is unknown**, and a pilot on real footage is
-    the only way to establish it.
+11. **No accuracy figure appears in this repository, and none should be inferred from
+    it.** Training metrics were recorded but are held in the separate `ppe_labeling`
+    labelling-tool documentation, maintained by another member of the capstone team —
+    **obtain them as part of the handover.** They are training metrics on synthetic
+    data.
+
+    All training footage was **synthetic**, generated with ComfyUI and Wan 14B, not
+    filmed at a De Heus site, and the models have never been evaluated against real
+    factory cameras. **Performance in production is unknown**, and a pilot on real
+    footage is the only way to establish it.
 
 ### Known defects, left unfixed
 

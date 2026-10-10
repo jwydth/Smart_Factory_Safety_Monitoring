@@ -11,15 +11,21 @@ specific hardware — but it means the files have to travel separately from the 
 
 ## Where to get the files
 
-**Four of the five are delivered separately** by the capstone team, outside this
-repository, because they are large binaries that git does not track.
+**All model files are delivered separately**, outside this repository, because they are
+large binaries that git does not track. Delivery is being handled by the member of the
+capstone team who also maintains the `ppe_labeling` labelling-tool documentation, and
+covers the five required models plus the optional TensorRT engines.
 
-> **Contact:** Ethan Phuc (Nguyen Trong Phuc), Information Technology —
-> ethan.phuc@deheus.com
+> **De Heus technical contact:** Ethan Phuc (Nguyen Trong Phuc), Information
+> Technology — ethan.phuc@deheus.com
+>
+> `VERIFY:` confirm on receipt that all five arrived, by running
+> `scripts/verify_weights.py` — it checks every checksum and exits non-zero if
+> anything is missing or wrong.
 
-The fifth, `best_behavior_model.joblib`, **does not need to be requested** — it is
-recoverable from this repository's own git history. See
-[below](#the-behavior-model-is-recoverable-from-this-repository).
+`best_behavior_model.joblib` is included in that delivery **and** is independently
+recoverable from this repository's git history, so it is the one file that cannot be
+lost. See [below](#the-behavior-model-is-recoverable-from-this-repository).
 
 The `source` field in `MANIFEST.json` records how each model was *trained*, which is a
 different question from how to *obtain* it; `obtain_from` answers the latter.
@@ -189,7 +195,7 @@ requires a rebuild.
 
 **The training footage was synthetic.** It was generated with ComfyUI and Wan 14B
 rather than filmed at a De Heus site. This matters when judging how the models will
-behave on real factory cameras: no measured accuracy figure against real De Heus
+behave on real factory cameras: no accuracy figure against real De Heus
 footage exists, and none should be inferred from the models' training metadata.
 
 The live demo footage shown at the capstone event was likewise AI-generated, which is
