@@ -12,6 +12,9 @@ Ethan Phuc (Nguyen Trong Phuc) — ethan.phuc@deheus.com
 
 - [ ] Repository access transferred — `jwydth/smart_factory_safety_monitoring`
 - [ ] **Clone with full history** (not `--depth 1`) to a **short path**, e.g. `C:\dev\ppe`
+- [ ] **Cloned the `develop` branch, not the default branch.** `develop` is the
+      handover baseline; at handover `main` was 53 commits behind it and three months
+      old, so the documentation does not describe the code on `main`
 - [ ] Tag `v1.0.0-handover` is present
 - [ ] **Four model weight files received** out of band: `ppe_v4.pt`, `sign_model.pt`,
       `pose.pt`, `reid.pt`
@@ -61,6 +64,11 @@ Ethan Phuc (Nguyen Trong Phuc) — ethan.phuc@deheus.com
       people
 - [ ] Retention policy decided for the MinIO evidence bucket — **there is none, and
       deleted incidents mostly leave their snapshots behind**
+- [ ] **Decided what happens to the `main` branch.** It is three months stale and
+      diverged from `develop`, so anyone cloning the default branch gets code the
+      documentation does not match. Options: merge `develop` into `main`, make
+      `develop` the default branch, or leave it and tell everyone to use `develop`.
+      See `RELEASE_NOTES.md`
 
 ## 5. Operate
 

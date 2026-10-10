@@ -158,6 +158,26 @@ mistaken for an oversight:
 
 ---
 
+## Which branch is the handover baseline
+
+**`develop` is the handover baseline, not `main`.**
+
+At the time of this release `main` was **53 commits behind `develop`** and carried 7
+commits of its own that `develop` does not have, including a revert. Its most recent
+commit was 2026-07-05, roughly three months before this handover.
+
+This matters because `docs/ARCHITECTURE.md` and the three generated references
+(`CONFIGURATION.md`, `API.md`, `DATABASE.md`) were produced from the code on `develop`
+at `950e09c`. **On `main` they would describe code that is not there.**
+
+> **Open decision for De Heus:** someone cloning the repository's default branch gets
+> the stale code, not the code these documents describe. Reconciling `main` with
+> `develop` moves 53 commits of application code — a code release, with its own
+> testing and risk — and was deliberately left out of a documentation-only handover.
+> The options are to merge `develop` into `main`, to change the default branch to
+> `develop`, or to leave it and tell everyone to use `develop`. **This has not been
+> decided.**
+
 ## Upgrading from the previous state
 
 There is nothing to upgrade — no application code changed. Two things to be aware of:
