@@ -8,7 +8,8 @@ De Heus LLC. **No secret value appears in this document.**
 | Commit scanned | `950e09c` (working tree at the time of the Phase B branch) |
 | Scanner | gitleaks 8.30.1 (installed for this purpose; see §1) |
 | Scanned | 2026-10-10 |
-| Result | **No secret has ever been committed to this repository.** |
+| Result | **No secret has ever been committed to this repository.** Committed development placeholders are a separate matter — see §2. |
+| Repository visibility | **Public** |
 
 ---
 
@@ -72,10 +73,31 @@ no credentials".
 
 ---
 
-## 2. Committed development defaults — DEV ONLY
+## 2. Committed development defaults — DEV ONLY, and the repository is public
+
+> **The GitHub repository is public** (verified 2026-10-10: the API reports
+> `"private": false`). Everything in §2 is therefore world-readable, and so is every
+> commit in the history scanned in §1.
 
 These are placeholders committed deliberately so that `docker compose up -d` works on a
 laptop. They are now marked `DEV ONLY` in the files that define them.
+
+### Why this is more than cosmetic
+
+The development machine's PostgreSQL and MinIO **use these exact published values** —
+evidenced by the psycopg traceback in §4 (`password=safety_password`) and by the
+`.env` key lengths recorded in §3, where both MinIO keys are 10 characters, matching
+`minioadmin`.
+
+So the credentials protecting the development data store are public knowledge. That is
+an exposure **only if those ports were ever reachable from outside `localhost`**, which
+this review could not determine — a public tunnel would leave no trace in git.
+
+`VERIFY:` whether the stack was ever exposed publicly (for example through an ngrok
+tunnel; a local `ngrok_deploy` branch exists, though it was never pushed and carries no
+ngrok configuration or authtoken). **If it was, treat the development PostgreSQL and
+MinIO as compromised rather than merely stale**, and assume their contents were
+readable.
 
 | Credential | Defined in | Note |
 | --- | --- | --- |

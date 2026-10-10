@@ -39,6 +39,12 @@ Ethan Phuc (Nguyen Trong Phuc) — ethan.phuc@deheus.com
 
 ## 3. Secure — do before any exposed deployment
 
+- [ ] **Repository visibility decided.** It is currently **public**, which means the
+      DEV ONLY placeholder credentials in `docker-compose.yml` and `.env.example` are
+      world-readable — and the development PostgreSQL and MinIO used those exact values
+- [ ] **Established whether the stack was ever exposed publicly** (e.g. an ngrok
+      tunnel) while running on those default credentials. If it was, treat the
+      development database and object store as compromised, not just stale
 - [ ] **SMTP password rotated.** The only live secret. The old one was used throughout
       the capstone project and must be treated as compromised
 - [ ] **MinIO access and secret keys rotated** (defaults were `minioadmin`/`minioadmin`)
