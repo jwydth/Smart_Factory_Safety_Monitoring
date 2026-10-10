@@ -57,7 +57,7 @@ Two environment facts that matter when reproducing these numbers:
 
 | # | Command | Working dir | Exit | Result | Log |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `./.venv/Scripts/python.exe -m pytest -q` | `backend/` | 1 | **11 failed, 411 passed** (422 total), 16 warnings, 34.32s | [`01-backend-pytest.txt`](./baseline-logs/01-backend-pytest.txt) |
+| 1 | `./.venv/Scripts/python.exe -m pytest -q` | `backend/` | 1 | **11 failed, 411 passed** (422 total), 16 warnings, 34.32s — but see the determinism correction in §3 | [`01-backend-pytest.txt`](./baseline-logs/01-backend-pytest.txt) |
 | 2 | `./.venv/Scripts/python.exe -m ruff check .` | `backend/` | 1 | **29 errors** (11 auto-fixable) | [`02-backend-ruff.txt`](./baseline-logs/02-backend-ruff.txt) |
 | 3 | `./node_modules/.bin/tsc --noEmit` | `frontend/` | 0 | **clean — 0 errors** | [`03-frontend-tsc.txt`](./baseline-logs/03-frontend-tsc.txt) |
 | 4 | `npm run lint` | `frontend/` | 1 | **34 problems** (21 errors, 13 warnings) | [`04-frontend-lint.txt`](./baseline-logs/04-frontend-lint.txt) |
@@ -92,6 +92,24 @@ with no infrastructure dependency.
 Seven of the ten real failures are in one file, `tests/test_auto_zone.py` — the auto
 zone-suggestion feature that commit `fe94876` reworked (see
 `docs/CHANGES_SINCE_OVERVIEW.md` §5).
+
+### Correction: the suite is not fully deterministic
+
+*Added during Phase B.* A later run of the same unchanged suite produced **12**
+failures rather than 11. The extra one was
+`tests/test_frame_hub.py::test_latest_drops_stale_while_ordered_marks_overflow_gap`,
+which **failed 1 time in 5** when run in isolation.
+
+It is flaky by construction, not a regression: it sleeps 30 ms and then asserts that
+the capture thread produced enough frames to overflow a queue of size 2
+(`tests/test_frame_hub.py:89-107`). On a loaded machine, or when the thread is slow to
+start, nothing is dropped and the assertion fails.
+
+So the honest baseline is **10 deterministic failures, plus 1 infrastructure-dependent
+failure, plus at least one timing-flaky test** that moves the total between 11 and 12.
+Anyone comparing a future run against this document should re-run before concluding a
+regression. No other test has been observed to be flaky, but only a handful of runs
+were performed — `VERIFY:` by repeated runs if a stable number is ever needed.
 
 ### One failure worth flagging for Phase C
 
