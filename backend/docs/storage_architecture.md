@@ -1,3 +1,11 @@
+> # ⚠️ PARTLY STALE
+>
+> Still broadly accurate on object-key conventions and the local-staging-then-upload
+> flow, but it predates the memoization of `_ensure_bucket()`, so the per-object
+> bucket-check round-trip it describes no longer happens.
+>
+> See [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) §12.
+
 # Storage Architecture
 
 The backend separates structured records from evidence files.

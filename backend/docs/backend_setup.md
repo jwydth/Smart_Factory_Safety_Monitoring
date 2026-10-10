@@ -1,3 +1,9 @@
+> # ⚠️ SUPERSEDED
+>
+> **Use the [README](../../README.md)** for setup and
+> [`docs/OPERATIONS.md`](../../docs/OPERATIONS.md) for running the system. Kept for
+> history.
+
 # Backend Setup
 
 The main project README is the source of truth for first-time setup.

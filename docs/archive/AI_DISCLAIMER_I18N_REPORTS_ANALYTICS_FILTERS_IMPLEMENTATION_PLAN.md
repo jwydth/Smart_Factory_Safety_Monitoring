@@ -1,3 +1,15 @@
+> # ⚠️ HISTORICAL — COMPLETED EXECUTION PLAN
+>
+> **This is not guidance and never was documentation.** It is a 3,234-line execution
+> plan for work that has since landed, prescribing commit messages, phase ordering and
+> acceptance gates. Its prescribed commit format (`Fix(video data): …`) does not match
+> what was actually committed (`[FIX] …`), so reading it as current convention will
+> mislead you.
+>
+> Kept only to explain why the AI-disclaimer badge, EN/VI reports, analytics and
+> incident filters are built the way they are. For what the code does now, see
+> [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md).
+
 # Three-Feature Implementation Plan
 
 > **Repo:** `jwydth/Smart_Factory_Safety_Monitoring`, branch `develop`

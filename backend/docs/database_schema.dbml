@@ -1,3 +1,13 @@
+// ⚠️ STALE — SUPERSEDED by docs/DATABASE.md
+//
+// This DBML describes a target/aspirational schema in places, not the one in the
+// code. It types dwell_threshold_seconds as integer (it is a Float), documents
+// status/severity columns on ppe_violations that do not exist, and its own header
+// calls behavior violations "deferred" when behavior_incidents is fully implemented.
+// It also predates the area_zone_id column on all three incident tables.
+//
+// Use docs/DATABASE.md, which is generated from the SQLModel metadata.
+
 Project safety_monitoring {
   database_type: "PostgreSQL"
   Note: "Target schema design for factory, camera, physical-zone, PPE, and zone-incident data. This design is not yet implemented by SQLModel models or migrations. Users support frontend login and report email delivery only. Incident assignment and audit workflow, roles, and permissions are deferred. Behavior violations are deferred until danger behavior detection exists. ppe_violation_subjects already represents workers involved in PPE violations, so no ppe_violated_people table is included."

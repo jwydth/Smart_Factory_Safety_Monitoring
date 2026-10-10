@@ -1,3 +1,12 @@
+> # ⚠️ HISTORICAL — SUPERSEDED
+>
+> **Do not rely on this document.** It was a delta against `CODEBASE_OVERVIEW.md`
+> covering commits up to `b088657` (2026-09-04), and is kept only for history. Two of
+> its claims are wrong; see [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) §16.
+>
+> **Current documentation:** [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md), which merges
+> this document and the overview it amended into one current description.
+
 # What changed since the last codebase overview
 
 **Baseline:** `docs/CODEBASE_OVERVIEW.md`, whose narrative is written "as of

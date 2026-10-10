@@ -1,3 +1,10 @@
+> # ⚠️ HISTORICAL
+>
+> A map of the refactor that split the original monolithic `ppe_detector.py`. Kept for
+> history; the structure it describes is now simply the structure of the code.
+>
+> See [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) §8.
+
 # `ppe_detector.py` dependency map
 
 Inventory of every top-level `def`/`class` in `app/services/ppe_detector.py`

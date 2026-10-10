@@ -1,3 +1,13 @@
+> # ⚠️ HISTORICAL — SUPERSEDED
+>
+> **Do not rely on this document.** It is a snapshot written as of **2026-08-10** and
+> is kept only for history. It has known errors, listed in
+> [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) §16.
+>
+> **Current documentation:** [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md), plus the
+> generated [`API.md`](../API.md), [`DATABASE.md`](../DATABASE.md) and
+> [`CONFIGURATION.md`](../CONFIGURATION.md).
+
 # De Heus PPE / Safety Monitor — Codebase Overview
 
 This document is a deep-dive reference to the entire repository: what each backend

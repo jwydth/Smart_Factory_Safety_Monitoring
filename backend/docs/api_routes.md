@@ -1,3 +1,13 @@
+> # ⚠️ STALE — SUPERSEDED by `docs/API.md`
+>
+> This file is known to be out of date and is kept only for history. It omits the
+> `cameras`, `features`, `analytics`, `behavior-detection` and report-schedule
+> endpoints entirely, documents `GET /zones/{video_name}`-style path params that are
+> actually **query** params, and omits `GET`/`DELETE /health/streams`.
+>
+> **Use [`docs/API.md`](../../docs/API.md)**, which is generated from the live FastAPI
+> OpenAPI schema, or the running server at `/docs`.
+
 # Backend API Routes
 
 Base URL for local development:
