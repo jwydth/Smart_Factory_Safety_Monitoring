@@ -34,6 +34,8 @@ item that needs a decision before deployment.
 | **Know about credentials and security** | [docs/handover/SECURITY.md](./docs/handover/SECURITY.md) |
 | **See the measured state at handover** | [docs/handover/BASELINE.md](./docs/handover/BASELINE.md) |
 | **See this guide verified on a clean checkout** | [docs/handover/CLEAN_ROOM_TEST.md](./docs/handover/CLEAN_ROOM_TEST.md) |
+| **Accept the handover** (De Heus) | [docs/handover/CHECKLIST.md](./docs/handover/CHECKLIST.md) |
+| **Know what changed in this release** | [RELEASE_NOTES.md](./RELEASE_NOTES.md) |
 
 The three documents marked *generated* are produced from the code and must not be
 edited by hand:
