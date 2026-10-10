@@ -8,6 +8,30 @@ For checksums, sizes and how to obtain the files, see
 [`backend/weights/README.md`](../backend/weights/README.md) and
 [`backend/weights/MANIFEST.json`](../backend/weights/MANIFEST.json).
 
+## The reference configuration used TensorRT
+
+Each card below names the `.pt` file, because that is the portable artifact and the
+`config.py` default. **The capstone development and demo machine did not run three of
+them that way.** Its `backend/.env` pointed at pre-built TensorRT engines:
+
+| Model | `.pt` (default) | What the demo machine actually loaded |
+| --- | --- | --- |
+| PPE | `weights/ppe_v4.pt` | **`weights/ppe_v4.engine`** |
+| Signs | `weights/sign_model.pt` | **`weights/sign_model.engine`** |
+| Pose | `weights/pose.pt` | **`weights/pose.engine`** |
+| Re-identification | `weights/reid.pt` | `weights/reid.pt` — no engine exists for it |
+| Behavior | `weights/best_behavior_model.joblib` | a joblib classifier; TensorRT does not apply |
+
+Two consequences worth stating plainly:
+
+- **Any speed you were shown was TensorRT speed.** Running from `.pt` works — it was
+  verified end to end on a CPU-only clean install — but it is slower, and that is not
+  a fault.
+- **Engines only load on hardware matching the machine that built them.** To get demo
+  performance on different hardware, rebuild them with
+  `scripts/export_tensorrt.py`; see
+  [`backend/weights/README.md`](../backend/weights/README.md).
+
 ## Read this before judging any model below
 
 **No accuracy number exists for any of these models, and this document deliberately
@@ -79,7 +103,7 @@ is used in a report or a UI label.
 | | |
 | --- | --- |
 | Purpose | Produces the 17-keypoint skeletons the behavior classifier consumes |
-| Setting | `FALL_MODEL_PATH` |
+| Setting | `FALL_MODEL_PATH` — **the demo machine pointed this at `pose.engine`, not `pose.pt`** |
 | Classes | `person`, with 17 COCO keypoints (`kpt_shape [17, 3]`) |
 | Architecture | `yolo26s-pose` |
 | Trained | 2026-01-11, 300 epochs, 640px, batch 128, on stock `coco-pose`, ultralytics 8.3.222 |

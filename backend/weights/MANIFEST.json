@@ -150,7 +150,7 @@
     }
   ],
   "accelerated_optional": {
-    "note": "TensorRT engines and their ONNX intermediates, built from the .pt files above by backend/scripts/export_tensorrt.py. Delivered separately alongside the .pt files as a performance optimisation. They are OPTIONAL: the system runs on the .pt files alone, and nothing loads an engine automatically \u2014 a setting must point at the .engine path explicitly.",
+    "note": "TensorRT engines and their ONNX intermediates, built from the .pt files above by backend/scripts/export_tensorrt.py. Optional in the sense that the system runs correctly without them and nothing loads one automatically - a setting must point at the .engine path explicitly - but see reference_configuration: the demonstrated system did point at them. No reid engine exists; export_tensorrt.py covers PPE, pose and sign only.",
     "portability_warning": "A TensorRT engine is tied to the GPU compute capability, driver and TensorRT version that built it, and fails to deserialize at startup anywhere else. If De Heus hardware differs from build_environment below, these files will not load and are not a defect \u2014 rebuild them with scripts/export_tensorrt.py on the target machine. The .pt files remain the source of truth.",
     "build_environment": {
       "built": "2026-09-14",
@@ -210,6 +210,7 @@
         "note": "Export intermediate."
       }
     ],
-    "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com"
+    "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
+    "reference_configuration": "The capstone development and demo machine ran PPE, sign and pose inference from these engines, not from the .pt files: MODEL_PATH=weights/ppe_v4.engine, SIGN_MODEL_PATH=weights/sign_model.engine, FALL_MODEL_PATH=weights/pose.engine. Only FALL_REID_MODEL_PATH stayed at weights/reid.pt, because no reid engine is built. Any demonstrated performance was therefore TensorRT performance. Running from .pt is supported and was verified on a CPU-only clean install, but is slower."
   }
 }

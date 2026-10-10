@@ -219,6 +219,12 @@ cd backend
 Expected on hardware other than the machine that built it. TensorRT engines are tied
 to GPU compute capability, driver and TensorRT version.
 
+**Note that the demonstrated system ran on engines**, not `.pt` files — PPE, sign and
+pose all pointed at `.engine` paths (see
+[`backend/weights/README.md`](../backend/weights/README.md)). So on different hardware
+you have a real choice: fall back to the `.pt` files and accept slower inference, or
+rebuild the engines to recover demo performance.
+
 Either point the settings back at the `.pt` files, or rebuild:
 
 ```powershell

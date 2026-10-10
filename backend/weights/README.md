@@ -116,15 +116,34 @@ and discarded.
 file is absent. It exists neither in the repository nor in history. Supplying it would
 make a missing primary model fail quietly instead of loudly, so do not.
 
-## TensorRT engines — delivered separately, optional
+## TensorRT engines — what the demonstrated system actually ran on
 
 Pre-built FP16 TensorRT engines (`*.engine`) and their ONNX intermediates (`*.onnx`)
-are delivered alongside the `.pt` files as a **performance optimisation**. Their
-checksums and build environment are recorded under `accelerated_optional` in
-`MANIFEST.json`.
+are delivered alongside the `.pt` files. Their checksums and build environment are
+recorded under `accelerated_optional` in `MANIFEST.json`.
 
-**They are optional.** The system runs correctly on the `.pt` files alone, and nothing
-loads an engine automatically — a setting has to point at the `.engine` path
+> **Read this before choosing a configuration.** The capstone development and demo
+> machine ran **three of the four YOLO models from TensorRT engines, not from `.pt`
+> files.** Its `backend/.env` set:
+>
+> ```bash
+> MODEL_PATH=weights/ppe_v4.engine          # PPE
+> SIGN_MODEL_PATH=weights/sign_model.engine # signs
+> FALL_MODEL_PATH=weights/pose.engine       # the pose stage of fall detection
+> FALL_REID_MODEL_PATH=weights/reid.pt      # the only one left as .pt
+> ```
+>
+> So **any performance you were shown was TensorRT performance.** A `.pt`-only
+> deployment is a valid and fully supported configuration — it was verified end to end
+> in the [clean-room test](../../docs/handover/CLEAN_ROOM_TEST.md) — but it **will be
+> slower than the demo**, and that difference is not a fault.
+
+There is no `reid.engine`: `scripts/export_tensorrt.py` builds engines for the PPE,
+pose and sign models only, so re-identification always runs from `reid.pt`.
+
+**The `.pt` files remain required regardless.** They are the source the engines are
+built from, the fallback when an engine will not load, and the only portable form.
+Nothing loads an engine automatically — a setting has to point at the `.engine` path
 explicitly:
 
 ```bash
