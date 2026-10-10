@@ -33,6 +33,7 @@ item that needs a decision before deployment.
 | **Obtain or verify model weights** | [backend/weights/README.md](./backend/weights/README.md) |
 | **Know about credentials and security** | [docs/handover/SECURITY.md](./docs/handover/SECURITY.md) |
 | **See the measured state at handover** | [docs/handover/BASELINE.md](./docs/handover/BASELINE.md) |
+| **See this guide verified on a clean checkout** | [docs/handover/CLEAN_ROOM_TEST.md](./docs/handover/CLEAN_ROOM_TEST.md) |
 
 The three documents marked *generated* are produced from the code and must not be
 edited by hand:
@@ -54,6 +55,14 @@ NVIDIA GPU for realistic performance (CPU works but is slow). **You also need th
 model weights, which are not in this repository** — see
 [backend/weights/README.md](./backend/weights/README.md).
 
+> **Clone to a short path**, for example `C:\dev\ppe`. Creating the Python virtual
+> environment fails on a deeply nested path, and the error it gives — a non-zero exit
+> from `ensurepip` — says nothing about path length. This was confirmed during the
+> [clean-room test](./docs/handover/CLEAN_ROOM_TEST.md).
+>
+> Clone with **full history**: `backend/weights/best_behavior_model.joblib` is
+> recoverable from an old commit, which a `--depth 1` clone cannot reach.
+
 ### 1. Infrastructure
 
 ```powershell
@@ -66,19 +75,23 @@ Starts PostgreSQL (host port 5433), MinIO (9000, console 9011) and MediaMTX
 
 ### 2. Backend
 
+Commands below call the virtual environment's interpreter by path, so you never need
+to activate it — which also avoids PowerShell's execution-policy prompt. If you prefer
+to activate, `.\.venv\Scripts\Activate.ps1` works once execution policy allows it
+(`Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`).
+
 ```powershell
 cd backend
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
 
 # For NVIDIA GPU, install the CUDA wheels FIRST, then the rest:
-pip install -r requirements-cuda-cu132.txt
-pip install -r requirements.txt
-# CPU-only: just `pip install -r requirements.txt`
+.\.venv\Scripts\python.exe -m pip install -r requirements-cuda-cu132.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+# CPU-only: just the second line. Everything in this quick start works on CPU.
 
 Copy-Item .env.example .env       # then edit it — see the DEV ONLY notes inside
-python -m app.db.init_db          # create the tables
+.\.venv\Scripts\python.exe -m app.db.init_db          # create the tables
 ```
 
 Put the model weights in `backend/weights/`, then check them:
@@ -90,7 +103,7 @@ Put the model weights in `backend/weights/`, then check them:
 Start the API:
 
 ```powershell
-python -m uvicorn app.main:app --reload --reload-dir app --port 8000
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --reload-dir app --port 8000
 ```
 
 `--reload-dir app` matters: without it, every incident snapshot written during
@@ -184,8 +197,17 @@ Full detail in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Development
 
+**The test and lint tools are not in `requirements.txt`.** Install them first, pinned
+to the versions the recorded baseline was measured with:
+
 ```powershell
 cd backend
+.\.venv\Scripts\python.exe -m pip install "pytest==9.1.1" "ruff==0.15.20"
+```
+
+Then:
+
+```powershell
 .\.venv\Scripts\python.exe -m pytest -q          # tests
 .\.venv\Scripts\python.exe -m ruff check .       # lint
 
@@ -195,10 +217,20 @@ npm run lint
 ```
 
 **These do not all pass**, and that is the known state rather than a broken checkout:
-10 backend tests fail deterministically, backend lint reports 29 problems, and
-frontend lint reports 34. The frontend type-check is clean. Exact numbers, the list of
-failing tests, and one flaky test are recorded in
-[docs/handover/BASELINE.md](./docs/handover/BASELINE.md). There is no CI.
+**9 backend tests fail deterministically** (seven of them in `tests/test_auto_zone.py`),
+backend lint reports 29 problems, and frontend lint reports 34. The frontend
+type-check is clean. There is no CI.
+
+> **The test suite reads `backend/.env`.** If you copied `.env.example` verbatim, six
+> reporting tests fail on `REPORT_RECIPIENT_ALLOWLIST` — they assume the code default
+> of `[]` while the template ships `["@deheus.com"]`. Those six failures are an
+> artefact of the test setup, not a defect. Keep the template's value, which is the
+> safe one.
+
+Exact numbers, the full list of failing tests, and one timing-flaky test are in
+[docs/handover/BASELINE.md](./docs/handover/BASELINE.md); the clean-checkout
+verification is in
+[docs/handover/CLEAN_ROOM_TEST.md](./docs/handover/CLEAN_ROOM_TEST.md).
 
 Project coding conventions are in [AGENTS.md](./AGENTS.md).
 

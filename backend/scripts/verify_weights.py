@@ -146,9 +146,12 @@ def main() -> int:
         print(f"  {entry['file']} - {failure['status']}")
         print(f"    purpose: {entry.get('purpose', 'unknown')}")
         print(f"    loaded by setting: {entry.get('loaded_by', 'unknown')}")
-        source = entry.get("source")
-        if source:
-            print(f"    how to obtain: {source}")
+        # obtain_from says how to get the file, which is what someone staring at a
+        # missing-weights error needs. `source` describes how it was trained, which
+        # is a different question and not useful here.
+        obtain_from = entry.get("obtain_from")
+        if obtain_from:
+            print(f"    how to obtain: {obtain_from}")
         print()
 
     print("Detection will not start until these are resolved.")

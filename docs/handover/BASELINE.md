@@ -105,11 +105,38 @@ the capture thread produced enough frames to overflow a queue of size 2
 (`tests/test_frame_hub.py:89-107`). On a loaded machine, or when the thread is slow to
 start, nothing is dropped and the assertion fails.
 
-So the honest baseline is **10 deterministic failures, plus 1 infrastructure-dependent
-failure, plus at least one timing-flaky test** that moves the total between 11 and 12.
+### Correction 2: the deterministic count is 9, not 10
+
+*Added during Phase E.* The [clean-room test](./CLEAN_ROOM_TEST.md) ran the same suite
+on a fresh CPU-only checkout and got **9 failures / 413 passed**. Two of the failures
+recorded above turned out to be artefacts of *this* machine, not of the code:
+
+| Test | Here | Clean room | Cause |
+| --- | --- | --- | --- |
+| `test_fall_detector.py::test_primary_behavior_classifier_is_extra_trees_...` | FAIL | **PASS** | This machine's `backend/.env` points at the superseded XGBoost `behavior.joblib`. With the corrected `.env.example` and the real ExtraTrees model, it passes. |
+| `test_tracking_overlay.py::test_mock_video_tracking_overlay_respects_stride` | FAIL | **PASS** | Needs a reachable database; PostgreSQL was down during this capture. |
+
+**The honest baseline is therefore: 9 deterministic failures** — seven in
+`tests/test_auto_zone.py`, one in `test_incident_diagnostics.py`, one in
+`test_stream_health.py` — **plus 1 that needs a database, plus at least 1 that is
+timing-flaky.** On this machine that totals 11 or 12; on a correctly configured machine
+it is 9 or 10.
+
 Anyone comparing a future run against this document should re-run before concluding a
 regression. No other test has been observed to be flaky, but only a handful of runs
 were performed — `VERIFY:` by repeated runs if a stable number is ever needed.
+
+### Correction 3: the suite reads `backend/.env`
+
+Also found in Phase E, and it affects anyone reproducing these numbers. The test suite
+loads the real `backend/.env` through `Settings.Config.env_file`, so **test results
+depend on the contents of that file.**
+
+Concretely: copying `.env.example` verbatim — which the README instructs — makes **six
+reporting tests fail**, because the template ships
+`REPORT_RECIPIENT_ALLOWLIST=["@deheus.com"]` while those tests assume the code default
+of `[]`. They are not defects. This machine's `.env` happens not to set that key, which
+is why they pass here.
 
 ### One failure worth flagging for Phase C
 
@@ -240,9 +267,17 @@ Reading of the deltas:
    would pass. This is the gap Phase C's weights manifest exists to close.
 4. **PostgreSQL and MinIO were not running.** Docker Desktop was down. This accounts
    for exactly one test failure and means no test requiring live storage was exercised.
-5. **An NVIDIA GPU is present** and CUDA-enabled torch is installed. Results on a
-   CPU-only machine will differ; `VERIFY:` by how much — this has not been measured.
-6. **One machine, one run, no CI.** There is no continuous integration in this
+5. **An NVIDIA GPU is present** and CUDA-enabled torch is installed. *Phase E measured
+   the CPU-only case, so this is no longer an open question:* **the results are the
+   same.** Ruff is identical (29), frontend type-check and lint are identical (clean,
+   34), and the backend failure set is identical once the two environmental causes in
+   Correction 2 are accounted for. The backend starts and serves all four health
+   endpoints on CPU. The GPU affects throughput, not correctness.
+6. **Three dependencies are unpinned** (`pillow`, `lap`, `opencv-python-headless`), so a
+   fresh install does not necessarily get the versions measured here. Phase E's clean
+   install resolved `opencv-python-headless` to **5.0.0.93** against this machine's
+   **4.13.0.92** — a major version apart from the same requirements file.
+7. **One machine, one run, no CI.** There is no continuous integration in this
    repository (a deliberate omission per `docs/HANDOVER_PLAN_LITE.md`), so nothing
    re-checks these numbers automatically. They are a point-in-time snapshot.
 

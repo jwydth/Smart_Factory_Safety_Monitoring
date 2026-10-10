@@ -191,14 +191,27 @@ Measured at `950e09c` and recorded in full in `docs/handover/BASELINE.md`:
 
 | | |
 | --- | --- |
-| Backend tests | **10 deterministic failures** out of 422, plus 1 that needs a database and at least 1 that is timing-flaky |
+| Backend tests | **9 deterministic failures** out of 422, plus 1 that needs a database and at least 1 that is timing-flaky |
 | Backend lint | 29 ruff errors (mostly `E402` import placement in `app/main.py`, and unused imports) |
 | Frontend type-check | **Clean** |
 | Frontend lint | 34 problems (21 errors, 13 warnings) |
 
-Seven of the ten real test failures are in `tests/test_auto_zone.py`. Fixing them was
-explicitly out of scope for the handover, so the numbers are recorded rather than
-repaired.
+**Seven of the nine** are in `tests/test_auto_zone.py`; the other two are in
+`test_incident_diagnostics.py` and `test_stream_health.py`. Fixing them was explicitly
+out of scope for the handover, so the numbers are recorded rather than repaired.
+
+Two further things make this debt easy to misread, both found by the
+[clean-room test](./handover/CLEAN_ROOM_TEST.md):
+
+- **`pytest` and `ruff` are not in `requirements.txt`**, and there is no dev-requirements
+  file, so a fresh checkout cannot run the checks the README asks for until they are
+  installed by hand. A `requirements-dev.txt` pinning `pytest==9.1.1` and
+  `ruff==0.15.20` is the tidy fix; it was not added here because the handover is
+  documentation-only.
+- **The test suite reads `backend/.env`**, so results depend on local configuration.
+  Copying `.env.example` verbatim adds **six spurious reporting failures** from
+  `REPORT_RECIPIENT_ALLOWLIST`. The tests assume the code default (`[]`); the template
+  ships the safe value. The tests are wrong here, not the template.
 
 There is also **no CI**. Nothing re-checks any of this automatically.
 

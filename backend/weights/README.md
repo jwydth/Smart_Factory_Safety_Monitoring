@@ -9,6 +9,21 @@ does not run.
 That is deliberate — model files are large binaries and TensorRT engines are tied to
 specific hardware — but it means the files have to travel separately from the code.
 
+## Where to get the files
+
+**Four of the five are delivered separately** by the capstone team, outside this
+repository, because they are large binaries that git does not track.
+
+> **Contact:** Ethan Phuc (Nguyen Trong Phuc), Information Technology —
+> ethan.phuc@deheus.com
+
+The fifth, `best_behavior_model.joblib`, **does not need to be requested** — it is
+recoverable from this repository's own git history. See
+[below](#the-behavior-model-is-recoverable-from-this-repository).
+
+The `source` field in `MANIFEST.json` records how each model was *trained*, which is a
+different question from how to *obtain* it; `obtain_from` answers the latter.
+
 ## Quick start
 
 1. Obtain the five required files (see the table below) and place them in this
@@ -74,9 +89,14 @@ history and can be restored without contacting anyone:
 git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib
 ```
 
-Verified: the restored file loads as a scikit-learn `ExtraTreesClassifier` with
+Verified twice: the restored file loads as a scikit-learn `ExtraTreesClassifier` with
 `n_features_in_=141` and `classes_=[0 1 2]`, is 11,510,305 bytes, and matches the
-SHA-256 in `MANIFEST.json`.
+SHA-256 in `MANIFEST.json`. The command was also run verbatim on a fresh clone during
+the [clean-room test](../../docs/handover/CLEAN_ROOM_TEST.md), where
+`verify_weights.py` then reported it `OK`.
+
+**This needs a clone with history.** `de167f9` is an ancestor of the current branch, so
+a normal clone has it, but a `--depth 1` shallow clone **cannot** produce this file.
 
 `VERIFY:` whether `de167f9`'s copy is the final trained version. It is the latest one
 that exists in git, and the capstone team confirmed ExtraTrees is the final

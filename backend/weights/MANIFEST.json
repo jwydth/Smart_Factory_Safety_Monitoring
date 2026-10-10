@@ -16,9 +16,19 @@
       "trained": "2026-08-26",
       "base_model": "yolo12n.pt",
       "framework": "ultralytics 8.4.51",
-      "train_args": { "epochs": 100, "imgsz": 640, "batch": 32 },
-      "classes": ["person", "helmet", "vest", "cleaning_coverall"],
+      "train_args": {
+        "epochs": 100,
+        "imgsz": 640,
+        "batch": 32
+      },
+      "classes": [
+        "person",
+        "helmet",
+        "vest",
+        "cleaning_coverall"
+      ],
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Trained from the dataset at ppe-detection/v2_pipeline/artifacts/20260826T062011Z_direct-final_yolo12n-factory-only_s42_027537d/dataset.yaml on the capstone team's training machine. Training data was synthetic. VERIFY: whether that artifact directory is archived anywhere De Heus can reach."
     },
     {
@@ -32,9 +42,19 @@
       "trained": "2026-06-14",
       "base_model": "yolov9t.pt",
       "framework": "ultralytics 8.4.51",
-      "train_args": { "epochs": 100, "imgsz": 640, "batch": 16 },
-      "classes": ["M014_Helmet", "M015_Vest", "P004_NoThoroughfare", "W011_Slippery"],
+      "train_args": {
+        "epochs": 100,
+        "imgsz": 640,
+        "batch": 16
+      },
+      "classes": [
+        "M014_Helmet",
+        "M015_Vest",
+        "P004_NoThoroughfare",
+        "W011_Slippery"
+      ],
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Trained from sign-detection/runs/final_model/_data_exp_D_full_pipeline_resolved.yaml on the capstone team's training machine. Class names follow ISO-style safety-sign codes. VERIFY: whether that dataset is archived anywhere De Heus can reach."
     },
     {
@@ -48,10 +68,18 @@
       "trained": "2026-01-11",
       "base_model": "yolo26s-pose.yaml",
       "framework": "ultralytics 8.3.222",
-      "train_args": { "epochs": 300, "imgsz": 640, "batch": 128, "data": "coco-pose.yaml" },
-      "classes": ["person"],
+      "train_args": {
+        "epochs": 300,
+        "imgsz": 640,
+        "batch": 128,
+        "data": "coco-pose.yaml"
+      },
+      "classes": [
+        "person"
+      ],
       "keypoints": "17 COCO keypoints, kpt_shape [17, 3]",
       "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "Checkpoint metadata shows training on the stock COCO-pose dataset on an Ultralytics developer machine, so this is a general-purpose public model rather than De Heus data. VERIFY: whether it is byte-identical to a published Ultralytics release; this was not confirmed, because confirming it needs a download and comparison."
     },
     {
@@ -65,9 +93,15 @@
       "trained": "2024-09-25",
       "base_model": "yolo11m-cls.yaml",
       "framework": "ultralytics 8.2.100",
-      "train_args": { "epochs": 200, "imgsz": 224, "batch": 256, "data": "imagenet" },
-      "classes": "1000 ImageNet classes. The class head is not used — the model is used as a feature extractor for appearance embeddings.",
+      "train_args": {
+        "epochs": 200,
+        "imgsz": 224,
+        "batch": 256,
+        "data": "imagenet"
+      },
+      "classes": "1000 ImageNet classes. The class head is not used \u2014 the model is used as a feature extractor for appearance embeddings.",
       "embedded_license": "AGPL-3.0 License (https://ultralytics.com/license)",
+      "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com",
       "source": "A stock ImageNet classification checkpoint used as a ReID backbone. VERIFY: whether it is byte-identical to the published yolo11m-cls release."
     },
     {
@@ -82,8 +116,13 @@
       "model_type": "scikit-learn ExtraTreesClassifier",
       "framework": "scikit-learn (loaded with joblib)",
       "input_features": 141,
-      "classes": ["others", "running", "falling"],
+      "classes": [
+        "others",
+        "running",
+        "falling"
+      ],
       "class_order_note": "predict_proba returns probabilities in this index order (0 others, 1 running, 2 falling); fall_detector.py unpacks them positionally, so the order is load-bearing.",
+      "obtain_from": "No request needed - recoverable from this repository's git history: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib  (needs a clone with history, not --depth 1)",
       "source": "RECOVERABLE FROM THIS REPOSITORY. Deleted from git in c7653a4, still present in history. Restore with: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib"
     }
   ],
@@ -95,7 +134,11 @@
       "sha256": "37c798b39aa5b2f3b019979dace99f41a105edb2c17cd070d9d38bf064cb4aa6",
       "model_type": "XGBClassifier",
       "input_features": 141,
-      "classes": ["others", "running", "falling"],
+      "classes": [
+        "others",
+        "running",
+        "falling"
+      ],
       "warning": "Accepts the same 141 features and returns the same 3 classes as the current model, so it loads and runs silently if a config or .env points at it. It is not the current model. Listed here only so the file can be identified by checksum if it is found on a machine."
     },
     {
@@ -107,8 +150,8 @@
     }
   ],
   "accelerated_optional": {
-    "note": "TensorRT engines and their ONNX intermediates, built from the .pt files above by backend/scripts/export_tensorrt.py. Delivered separately alongside the .pt files as a performance optimisation. They are OPTIONAL: the system runs on the .pt files alone, and nothing loads an engine automatically — a setting must point at the .engine path explicitly.",
-    "portability_warning": "A TensorRT engine is tied to the GPU compute capability, driver and TensorRT version that built it, and fails to deserialize at startup anywhere else. If De Heus hardware differs from build_environment below, these files will not load and are not a defect — rebuild them with scripts/export_tensorrt.py on the target machine. The .pt files remain the source of truth.",
+    "note": "TensorRT engines and their ONNX intermediates, built from the .pt files above by backend/scripts/export_tensorrt.py. Delivered separately alongside the .pt files as a performance optimisation. They are OPTIONAL: the system runs on the .pt files alone, and nothing loads an engine automatically \u2014 a setting must point at the .engine path explicitly.",
+    "portability_warning": "A TensorRT engine is tied to the GPU compute capability, driver and TensorRT version that built it, and fails to deserialize at startup anywhere else. If De Heus hardware differs from build_environment below, these files will not load and are not a defect \u2014 rebuild them with scripts/export_tensorrt.py on the target machine. The .pt files remain the source of truth.",
     "build_environment": {
       "built": "2026-09-14",
       "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
@@ -166,6 +209,7 @@
         "sha256": "81e616248ebcee595b48fdf59418ab66aed0dae62b2dfe344d803fd2b2be2cfa",
         "note": "Export intermediate."
       }
-    ]
+    ],
+    "obtain_from": "Delivered separately by the capstone team, outside this repository. Contact: Ethan Phuc (Nguyen Trong Phuc), Information Technology, ethan.phuc@deheus.com"
   }
 }
