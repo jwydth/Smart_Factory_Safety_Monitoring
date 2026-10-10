@@ -157,8 +157,11 @@ The live demo footage shown at the capstone event was likewise AI-generated, whi
 why the dashboard carries an AI-disclaimer badge on every annotated camera tile.
 
 The labelling tooling and the data workflow live in a separate `ppe_labeling`
-repository. `VERIFY:` its location, owner and handover status — **it was not inspected
-as part of this handover**, and nothing in this repository depends on it at runtime.
+repository. **It is deliberately out of scope here and is being documented separately
+by another member of the capstone team**, so this handover makes no claims about it.
+Nothing in this repository depends on it at runtime.
+
+`VERIFY:` where that separate documentation will live, so this page can link to it.
 
 `VERIFY:` whether the training datasets referenced in `MANIFEST.json`
 (`ppe-detection/v2_pipeline/artifacts/...` and

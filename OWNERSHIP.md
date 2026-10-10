@@ -37,9 +37,10 @@ repository.
   `backend/weights/` is tracked in git.
 - **Training data and the labelling workflow.** Training footage was synthetic,
   generated with ComfyUI and Wan 14B rather than filmed at a De Heus site. The
-  labelling tooling lives in a separate `ppe_labeling` repository.
-  `VERIFY:` the location, owner and handover status of that repository — it was not
-  inspected as part of this handover.
+  labelling tooling lives in a separate `ppe_labeling` repository, which is being
+  documented separately by another member of the capstone team and is deliberately
+  out of scope for this handover. `VERIFY:` where that documentation will live, so
+  this file can point to it.
 - **Credentials.** No secret has ever been committed to this repository; this was
   verified with a full-history scan (see `docs/handover/SECURITY.md`).
 
