@@ -1,0 +1,171 @@
+{
+  "manifest_version": 1,
+  "generated": "2026-10-10",
+  "generated_at_commit": "950e09c",
+  "weights_dir": "backend/weights",
+  "note": "Weights are gitignored and are not part of a clone. Checksums were computed from the files in use on the development machine at the commit above; best_behavior_model.joblib was recovered from git history (see its source field). Verify with: python scripts/verify_weights.py",
+  "models": [
+    {
+      "file": "ppe_v4.pt",
+      "required": true,
+      "purpose": "PPE compliance detection: locates people and the safety equipment they are or are not wearing.",
+      "loaded_by": "MODEL_PATH",
+      "size_bytes": 5518298,
+      "sha256": "dc0a474584144c0788830dbc5574885113e90a913f142a6106e432d4beda7fd5",
+      "origin": "custom-trained for this project",
+      "trained": "2026-08-26",
+      "base_model": "yolo12n.pt",
+      "framework": "ultralytics 8.4.51",
+      "train_args": { "epochs": 100, "imgsz": 640, "batch": 32 },
+      "classes": ["person", "helmet", "vest", "cleaning_coverall"],
+      "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "source": "Trained from the dataset at ppe-detection/v2_pipeline/artifacts/20260826T062011Z_direct-final_yolo12n-factory-only_s42_027537d/dataset.yaml on the capstone team's training machine. Training data was synthetic. VERIFY: whether that artifact directory is archived anywhere De Heus can reach."
+    },
+    {
+      "file": "sign_model.pt",
+      "required": true,
+      "purpose": "Safety-sign detection. Drives the automatic zone suggestions: a detected sign proposes a zone of the matching type.",
+      "loaded_by": "SIGN_MODEL_PATH",
+      "size_bytes": 4642249,
+      "sha256": "bfd1fb3faf5c4812b4d8cfde4933a071996972c5efd83be6e0ae43affee84226",
+      "origin": "custom-trained for this project",
+      "trained": "2026-06-14",
+      "base_model": "yolov9t.pt",
+      "framework": "ultralytics 8.4.51",
+      "train_args": { "epochs": 100, "imgsz": 640, "batch": 16 },
+      "classes": ["M014_Helmet", "M015_Vest", "P004_NoThoroughfare", "W011_Slippery"],
+      "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "source": "Trained from sign-detection/runs/final_model/_data_exp_D_full_pipeline_resolved.yaml on the capstone team's training machine. Class names follow ISO-style safety-sign codes. VERIFY: whether that dataset is archived anywhere De Heus can reach."
+    },
+    {
+      "file": "pose.pt",
+      "required": true,
+      "purpose": "Human pose estimation. Produces the 17-keypoint skeletons that the behavior classifier consumes.",
+      "loaded_by": "FALL_MODEL_PATH",
+      "size_bytes": 24151790,
+      "sha256": "a083adb42303728ae14c4bd6bd56d80da46f82fb2564dbd6f31dcc92ea321646",
+      "origin": "upstream Ultralytics model, not trained for this project",
+      "trained": "2026-01-11",
+      "base_model": "yolo26s-pose.yaml",
+      "framework": "ultralytics 8.3.222",
+      "train_args": { "epochs": 300, "imgsz": 640, "batch": 128, "data": "coco-pose.yaml" },
+      "classes": ["person"],
+      "keypoints": "17 COCO keypoints, kpt_shape [17, 3]",
+      "embedded_license": "AGPL-3.0 (https://ultralytics.com/license)",
+      "source": "Checkpoint metadata shows training on the stock COCO-pose dataset on an Ultralytics developer machine, so this is a general-purpose public model rather than De Heus data. VERIFY: whether it is byte-identical to a published Ultralytics release; this was not confirmed, because confirming it needs a download and comparison."
+    },
+    {
+      "file": "reid.pt",
+      "required": true,
+      "purpose": "Appearance embeddings for re-identification, so a tracked person keeps the same track id across occlusion and re-entry.",
+      "loaded_by": "FALL_REID_MODEL_PATH",
+      "size_bytes": 23487128,
+      "sha256": "80583b974e44292d56fc5ba4d26cd0bb04e77edc8bbf4317f7ce678147156dd5",
+      "origin": "upstream Ultralytics model, not trained for this project",
+      "trained": "2024-09-25",
+      "base_model": "yolo11m-cls.yaml",
+      "framework": "ultralytics 8.2.100",
+      "train_args": { "epochs": 200, "imgsz": 224, "batch": 256, "data": "imagenet" },
+      "classes": "1000 ImageNet classes. The class head is not used — the model is used as a feature extractor for appearance embeddings.",
+      "embedded_license": "AGPL-3.0 License (https://ultralytics.com/license)",
+      "source": "A stock ImageNet classification checkpoint used as a ReID backbone. VERIFY: whether it is byte-identical to the published yolo11m-cls release."
+    },
+    {
+      "file": "best_behavior_model.joblib",
+      "required": true,
+      "purpose": "Behavior classification from a 60-frame pose window: distinguishes normal movement from running and from falling.",
+      "loaded_by": "FALL_BEHAVIOR_MODEL_PATH",
+      "size_bytes": 11510305,
+      "sha256": "e60d9e9b99f4a0e7f8e5866dac3ff3c7a73823390c74114c7adab8029675f2fd",
+      "origin": "custom-trained for this project",
+      "trained": "VERIFY: training date unknown. The file entered git on 2026-08-05 in commit de167f9, which is the earliest date that can be evidenced.",
+      "model_type": "scikit-learn ExtraTreesClassifier",
+      "framework": "scikit-learn (loaded with joblib)",
+      "input_features": 141,
+      "classes": ["others", "running", "falling"],
+      "class_order_note": "predict_proba returns probabilities in this index order (0 others, 1 running, 2 falling); fall_detector.py unpacks them positionally, so the order is load-bearing.",
+      "source": "RECOVERABLE FROM THIS REPOSITORY. Deleted from git in c7653a4, still present in history. Restore with: git show de167f9:backend/weights/best_behavior_model.joblib > backend/weights/best_behavior_model.joblib"
+    }
+  ],
+  "superseded": [
+    {
+      "file": "behavior.joblib",
+      "purpose": "An older behavior classifier, superseded by best_behavior_model.joblib.",
+      "size_bytes": 5614835,
+      "sha256": "37c798b39aa5b2f3b019979dace99f41a105edb2c17cd070d9d38bf064cb4aa6",
+      "model_type": "XGBClassifier",
+      "input_features": 141,
+      "classes": ["others", "running", "falling"],
+      "warning": "Accepts the same 141 features and returns the same 3 classes as the current model, so it loads and runs silently if a config or .env points at it. It is not the current model. Listed here only so the file can be identified by checksum if it is found on a machine."
+    },
+    {
+      "file": "behavior.ubj",
+      "purpose": "Legacy portable XGBoost artifact, used only when the primary behavior file is absent.",
+      "loaded_by": "FALL_BEHAVIOR_PORTABLE_MODEL_PATH",
+      "status": "Not present in the repository, in git history at this commit, or on the development machine. Deleted from git in f1f2b90. No checksum can be recorded.",
+      "warning": "Because it is a fallback, a missing primary file does not fail loudly if this file ever reappears. Do not supply it unless there is a reason to."
+    }
+  ],
+  "accelerated_optional": {
+    "note": "TensorRT engines and their ONNX intermediates, built from the .pt files above by backend/scripts/export_tensorrt.py. Delivered separately alongside the .pt files as a performance optimisation. They are OPTIONAL: the system runs on the .pt files alone, and nothing loads an engine automatically — a setting must point at the .engine path explicitly.",
+    "portability_warning": "A TensorRT engine is tied to the GPU compute capability, driver and TensorRT version that built it, and fails to deserialize at startup anywhere else. If De Heus hardware differs from build_environment below, these files will not load and are not a defect — rebuild them with scripts/export_tensorrt.py on the target machine. The .pt files remain the source of truth.",
+    "build_environment": {
+      "built": "2026-09-14",
+      "gpu": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+      "compute_capability": "8.6",
+      "vram": "6144 MiB",
+      "driver_version": "610.62",
+      "tensorrt": "11.1.0.106",
+      "cuda": "13.2",
+      "cudnn": "92000",
+      "torch": "2.12.0+cu132",
+      "precision": "FP16, strongly-typed network",
+      "profile_note": "The optimisation profile is tuned for the live shape (1280x720 letterboxing to 384x640) and capped at 640x640, sized for a 6 GB card. A larger card would benefit from rebuilding rather than reusing these."
+    },
+    "files": [
+      {
+        "file": "ppe_v4.engine",
+        "built_from": "ppe_v4.pt",
+        "loaded_by": "MODEL_PATH (set it to weights/ppe_v4.engine to use)",
+        "size_bytes": 10291857,
+        "sha256": "b4bd629ef08fc32350172bf0e287eff144fbcd6912192f57dc9174706674743f"
+      },
+      {
+        "file": "pose.engine",
+        "built_from": "pose.pt",
+        "loaded_by": "FALL_MODEL_PATH (set it to weights/pose.engine to use)",
+        "size_bytes": 27177693,
+        "sha256": "e56e94ba58855aecbe3ca810f532f48f46f9426a0814897d007e9acb353d053c",
+        "note": "Built with a batch size matching BEHAVIOR_BATCH_MAX_SIZE; changing that setting requires a rebuild."
+      },
+      {
+        "file": "sign_model.engine",
+        "built_from": "sign_model.pt",
+        "loaded_by": "SIGN_MODEL_PATH (set it to weights/sign_model.engine to use)",
+        "size_bytes": 8831714,
+        "sha256": "9ce3a3fd8ad9a13b170ae9065796f16e39175c1cfc9316b0f243b966dad7ffaa"
+      },
+      {
+        "file": "ppe_v4.onnx",
+        "built_from": "ppe_v4.pt",
+        "size_bytes": 6183528,
+        "sha256": "143503f3e386bad5d15dda599670d4418b1c8deda5556752faa76eac9f31e9d3",
+        "note": "Export intermediate. Only needed to rebuild an engine without re-exporting from the .pt."
+      },
+      {
+        "file": "pose.onnx",
+        "built_from": "pose.pt",
+        "size_bytes": 22095366,
+        "sha256": "d08eee98bf6b795fa58a51dff02b6d1927f167ac3fab5acee0e6c66114586bc0",
+        "note": "Export intermediate."
+      },
+      {
+        "file": "sign_model.onnx",
+        "built_from": "sign_model.pt",
+        "size_bytes": 5058708,
+        "sha256": "81e616248ebcee595b48fdf59418ab66aed0dae62b2dfe344d803fd2b2be2cfa",
+        "note": "Export intermediate."
+      }
+    ]
+  }
+}
